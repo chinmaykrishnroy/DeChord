@@ -2,6 +2,11 @@
 
 Welcome to DeChord! This application is designed for musicians, music enthusiasts, and anyone interested in analyzing the harmonic content of audio files. DeChord uses advanced music analysis algorithms to recognize the musical key and chords in an audio file and displays this information in real-time through an intuitive graphical user interface.
 
+## Images
+![Screenshot (10)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/f2a399a5-7ba3-430a-bf9a-795f2abc88a8)
+![Screenshot (9)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/fc6256c8-bf94-4542-b985-2dafbf2d3990)
+![Screenshot (14)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/f1cd092b-f5c5-4f02-8a0a-077fc399564e)
+
 ## Features
 
 ### Key and Chord Recognition
@@ -164,3 +169,13 @@ For any questions or suggestions, feel free to open an issue on the GitHub repos
 ---
 
 Thank you for using DeChord! I hope it helps you in your musical journey.
+
+## More Images
+![Screenshot (14)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/92275a84-39f8-4926-9073-7db6b6a7de64)
+![Screenshot (13)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/e70cf1ca-ff69-4c2d-8637-0caecbdeb4d5)
+![Screenshot (11)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/50380852-ba6c-4ca6-a49c-4970c0cb37f2)
+![Screenshot (10)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/a5174ab7-70ab-4821-84a8-868b89591d7c)
+![Screenshot (9)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/3e167d19-e7a2-4e90-a519-bf59db37ce41)
+![Screenshot (7)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/cba3a277-589c-4499-9c5f-31e7d722b0a0)
+![Screenshot (6)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/318b373d-1896-4549-9d0a-7b9a290b9744)
+![Screenshot (5)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/09d12110-2b0c-4de9-bf04-4eedbca234f5)
