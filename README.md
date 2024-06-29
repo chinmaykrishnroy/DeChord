@@ -133,7 +133,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 To add new features, you can extend the existing classes or add new ones. Ensure to update the GUI (`interface.py`) and connect the new functionalities appropriately.
 
 ### Modifying the Theme
-To modify the themes, you can update the `dark_theme` and `light_theme` stylesheets in the `main.py` file.
+To modify the themes, you can update the `dark_theme` and `light_theme` stylesheets in the `theme.py` file.
 
 ## Contributing
 
