@@ -136,7 +136,7 @@ To modify the themes, you can update the `dark_theme` and `light_theme` styleshe
 If you find any bugs or issues, please report them in the [Issues](https://github.com/chinmaykrishnroy/dechord/issues) section of the GitHub repository.
 
 ### Pull Requests
-We welcome contributions! Please fork the repository and create a pull request with your changes. Ensure your code follows the existing coding style and includes appropriate documentation and tests.
+I welcome contributions! Please fork the repository and create a pull request with your changes. Ensure your code follows the existing coding style and includes appropriate documentation and tests.
 
 ### Coding Standards
 - Follow PEP 8 guidelines for Python code.
@@ -163,4 +163,4 @@ For any questions or suggestions, feel free to open an issue on the GitHub repos
 
 ---
 
-Thank you for using DeChord! We hope it helps you in your musical journey.
+Thank you for using DeChord! I hope it helps you in your musical journey.
