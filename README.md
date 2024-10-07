@@ -54,41 +54,23 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 ### Setup
 
-1. **Clone the repository:**
+1. Clone the repository:
 
    ```bash
-   git clone https://github.com/chinmaykrishnroy/dechord.git
-   cd dechord
+   git clone https://github.com/chinmaykrishnroy/DeChord.git
+   cd DeChord
 
-   ```
-
-2. **Create a virtual environment:**
-
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-
-   ```
-
-3. **Install the required dependencies:**
-
-   ```bash
-   python -m pip install PyQt5==5.15.10 git+https://github.com/CPJKU/madmom
-
-   ```
-
-4. **Run the application:**
-
-   ```bash
-   python main.py
-
-   ```
-
-5. **Use .bat file to run directly:**
+2. Run the run.bat script for the first time:
 
    ```bash
    run.bat
-   ```
+
+3. Run the createshortcut.bat to generate a shortcut for the widget:
+
+   ```bash
+   createshortcut.bat
+
+4. <b> Use the shortcut file 'DeChord' to open the application from the next time. </b>
 
 ## How to Use
 
