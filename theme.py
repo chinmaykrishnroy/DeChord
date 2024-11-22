@@ -7,6 +7,19 @@ light_theme = """
     font-family: "Segoe UI";
 }
 
+QToolTip {
+	color: #000000;
+	background-color: #DFE0E2;
+	background-image: none;
+	background-position: left center;
+    background-repeat: no-repeat;
+	border: none;
+	/* border-left: 2px solid rgb(255, 121, 198); */
+	text-align: left;
+	padding-left: 8px;
+	margin: 0px;
+}
+
 QPushButton {
     color: #071013;
 }
@@ -98,7 +111,7 @@ QLabel {
 }
 
 #footer{
-	background: #5EB1BF
+	background: #4DA0AE
 }
 
 #githubBtn{
@@ -243,6 +256,18 @@ dark_theme = """
     margin: 0px;
     background-color: transparent;
     font-family: "Segoe UI";
+}
+
+QToolTip {
+	color: #999999;
+	background-color: #071013;
+	background-image: none;
+	background-position: left center;
+    background-repeat: no-repeat;
+	border: none;
+	text-align: left;
+	padding-left: 8px;
+	margin: 0px;
 }
 
 QPushButton {
