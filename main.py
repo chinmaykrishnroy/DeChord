@@ -1,6 +1,7 @@
 from interface import *
 from chords import *
 from key import *
+from tempo import *
 
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -45,7 +46,9 @@ class MainWindow(QMainWindow):
         self.ui.mediaMuteBtn.clicked.connect(self.mute_unmute)
         self.ui.githubBtn.clicked.connect(self.redirectGithub)
         self.ui.volumeSlider.sliderMoved.connect(self.set_volume)
-        self.ui.mediaProgressSlider.sliderMoved.connect(self.set_position)       
+        self.ui.mediaProgressSlider.sliderPressed.connect(lambda: self.timer.stop())
+        self.ui.mediaProgressSlider.sliderMoved.connect(self.set_position)
+        self.ui.mediaProgressSlider.sliderReleased.connect(lambda: self.timer.start(100))       
 
     def toggle_theme(self):
         self.is_dark = not self.is_dark
@@ -66,6 +69,7 @@ class MainWindow(QMainWindow):
     def play_pause(self):
         if self.player.state() == QMediaPlayer.PlayingState:
             self.player.pause()
+            self.timer.stop()
         else:
             self.player.play()
             self.timer.start(100)
@@ -126,10 +130,12 @@ class MainWindow(QMainWindow):
 
     def update_media(self, status):
         if status == QMediaPlayer.EndOfMedia:
-            self.ui.mediaPlayBtn.setIcon(QIcon(u":/icons/play.svg"))
-            self.player.pause()
+            self.timer.stop()
             self.set_position(0)
+            self.chord_index = 0
             self.update_chords(0)
+            self.player.stop()
+            self.ui.mediaPlayBtn.setIcon(QIcon(u":/icons/play.svg"))
 
     def set_volume(self, volume):
         self.player.setVolume(volume)
@@ -154,8 +160,12 @@ class MainWindow(QMainWindow):
             options = QFileDialog.Options()
             fileName, _ = QFileDialog.getOpenFileName(self, "Open Audio File", "", "Audio Files (*.wav *.mp3 *.m4a *.aac)", options=options)
         if fileName:
+            self.timer.stop()
             self.player.stop()
-            self.ui.keyLabel.hide()
+            self.player.setMedia(QMediaContent())
+            self.ui.mediaProgressSlider.setValue(0)
+            self.chord_index = 0
+            self.ui.keyLabel.clear()
             self.audio_file = fileName
             self.media_title = fileName.split("/")[-1].rsplit(".", 1)[0]
             self.ui.mediaTitleLabel.setText(self.media_title)
@@ -165,11 +175,22 @@ class MainWindow(QMainWindow):
             self.chord_thread = ChordRecognitionThread(fileName)
             self.chord_thread.result.connect(self.on_chords_recognized)
             self.chord_thread.start()
-            # self.key_thread = KeyRecognitionThread(fileName)
-            # self.key_thread.result.connect(self.on_key_recognized)
-            # self.key_thread.start()
-            self.chord_index = 0
+            self.tempo_thread = TempoDetectionThread(fileName)
+            self.tempo_thread.result.connect(self.on_tempo_detected)
+            self.tempo_thread.start()
+            self.key_thread = KeyRecognitionThread(fileName)
+            self.key_thread.result.connect(self.on_key_recognized)
+            self.key_thread.start()
             self.player.setMedia(QMediaContent(QUrl.fromLocalFile(fileName)))
+
+    def on_tempo_detected(self, tempo):
+        self.tempo = tempo
+        current_text = self.ui.keyLabel.text()
+        if current_text:
+            updated_text = f"{current_text}  |  {tempo} BPM"
+            self.ui.keyLabel.setText(updated_text)
+        else: self.ui.keyLabel.setText(f"{tempo} BPM")
+        self.ui.keyLabel.show()
 
     def on_chords_recognized(self, chords):
         self.chords = chords
@@ -185,7 +206,12 @@ class MainWindow(QMainWindow):
         self.ui.saveChordsBtn.setEnabled(True)
 
     def on_key_recognized(self, key):
-        self.ui.keyLabel.setText(key)
+        self.key = key
+        current_text = self.ui.keyLabel.text()
+        if current_text:
+            updated_text = f"{current_text}  |  {key}"
+            self.ui.keyLabel.setText(updated_text)
+        else: self.ui.keyLabel.setText(key)
         self.ui.keyLabel.show()
 
     def export_chords(self):
@@ -247,6 +273,7 @@ class MainWindow(QMainWindow):
             return "%02d:%02d:%02d" % (hours, minutes, round(seconds))
         else:
             return "%02d:%02d" % (minutes, round(seconds))
+
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
