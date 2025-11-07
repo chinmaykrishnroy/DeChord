@@ -8,7 +8,7 @@ set "TARGET_PATH=%PROJECT_DIR%run.bat"
 set "SHORTCUT_NAME=DeChord"
 set "SHORTCUT_PATH=%PROJECT_DIR%%SHORTCUT_NAME%.lnk"
 set "VBS_PATH=%PROJECT_DIR%hideWindowsTerminal.vbs"
-set "ICON_PATH=%PROJECT_DIR%icon.ico"
+set "ICON_PATH=%PROJECT_DIR%icon"
 
 :: Ensure VBS exists (this VBS should accept: 1) target batch path and run hidden)
 if not exist "%VBS_PATH%" (
