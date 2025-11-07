@@ -45,7 +45,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 - **PyQt5:** For building the graphical user interface.
 - **madmom:** A library for music signal processing, used for key and chord recognition.
 
-## Installation
+## Windows Installation 
 
 ### Prerequisites
 
@@ -65,12 +65,40 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
    ```bash
    run.bat
 
-3. Run the createshortcut.bat to generate a shortcut for the widget:
+3. Run the createWindowsShortcut.bat to generate a shortcut for the application:
 
    ```bash
-   createshortcut.bat
+   createWindowsShortcut.bat
 
-4. <b> Use the shortcut file 'DeChord' to open the application from the next time. </b>
+4. <b> Use the shortcut file 'DeChord' to open the application from next time. </b>
+
+## Linux/MacOS Installation 
+
+### Prerequisites
+
+- Python 3.7 or higher
+- Pip (Python package installer)
+
+### Setup
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/chinmaykrishnroy/DeChord.git
+   cd DeChord
+
+2. Build the run.sh script for the first time:
+
+   ```bash
+   chmod +x run.sh
+   ./run.sh
+
+3. Run the createLinuxShortcut.sh to generate Desktop shortcut for the application:
+
+   ```bash
+   createLinuxShortcut.sh
+
+4. <b> Use the Desktop Shortcut file 'DeChord' to open the application from the next time. </b>
 
 ## How to Use
 
