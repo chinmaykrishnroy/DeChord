@@ -87,11 +87,10 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
    git clone https://github.com/chinmaykrishnroy/DeChord.git
    cd DeChord
 
-2. Build the run.sh script for the first time:
+2. Build and run the run.sh script for the first time:
 
    ```bash
-   chmod +x run.sh
-   ./run.sh
+   chmod +x run.sh && ./run.sh
 
 3. Run the createLinuxShortcut.sh to generate Desktop shortcut for the application:
 
