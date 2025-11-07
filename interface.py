@@ -21,6 +21,7 @@ from PyQt5.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 import res
 from theme import light_theme, dark_theme
+from winshadow import enable_window_shadow
 import os
 
 

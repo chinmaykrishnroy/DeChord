@@ -9,6 +9,7 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.FramelessWindowHint)
+        enable_window_shadow(self)
         self.setWindowIcon(QIcon(u":/icons/chord.png"))
         self.show()
 
