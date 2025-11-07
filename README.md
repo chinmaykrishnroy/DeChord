@@ -95,7 +95,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 3. Run the createLinuxShortcut.sh to generate Desktop shortcut for the application:
 
    ```bash
-   createLinuxShortcut.sh
+   chmod +x createLinuxShortcut.sh && ./createLinuxShortcut.sh
 
 4. <b> Use the Desktop Shortcut file 'DeChord' to open the application from the next time. </b>
 
