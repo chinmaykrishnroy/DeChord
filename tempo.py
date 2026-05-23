@@ -1,43 +1,41 @@
-import os
-import hashlib
 from PyQt5.QtCore import QThread, pyqtSignal
 from madmom.features.beats import RNNBeatProcessor
 from madmom.features.tempo import TempoEstimationProcessor
+from analysis_cache import cache_file_for_audio
 
 class TempoDetectionThread(QThread):
     result = pyqtSignal(int)
+    error = pyqtSignal(str)
 
     def __init__(self, audio_file_path):
         super().__init__()
         self.audio_file_path = audio_file_path
 
     def run(self):
-        cache_dir = "cache/tempo/"
-        os.makedirs(cache_dir, exist_ok=True)
-        hash_object = hashlib.md5(self.audio_file_path.encode())
-        hashed_filename = hash_object.hexdigest() + ".txt"
-        cache_file = os.path.join(cache_dir, hashed_filename)
+        try:
+            cache_file = cache_file_for_audio(self.audio_file_path, "cache/tempo/", engine_id="madmom-tempo-v1")
+            cached_tempo = self._load_cache(cache_file)
+            if cached_tempo is not None:
+                self.result.emit(cached_tempo)
+                return
 
-        if os.path.exists(cache_file):
-            with open(cache_file, "r") as f:
-                cached_tempo = int(f.read().strip())
-            self.result.emit(cached_tempo)
+            beat_processor = RNNBeatProcessor()
+            beats = beat_processor(self.audio_file_path)
+            tempo_processor = TempoEstimationProcessor(fps=200)
+            tempos = tempo_processor(beats)
+            if len(tempos):
+                top_tempo = tempos[0][0]
+                adjusted_tempo = self.adjust_tempo(top_tempo)
+                rounded_tempo = round(adjusted_tempo)
+                with open(cache_file, "w", encoding="utf-8") as f:
+                    f.write(str(rounded_tempo))
+                self.result.emit(rounded_tempo)
+            else:
+                self.result.emit(0)
+        except Exception as e:
+            self.error.emit(f"Tempo analysis failed: {e}")
+        finally:
             self.quit()
-            return
-
-        beat_processor = RNNBeatProcessor()
-        beats = beat_processor(self.audio_file_path)
-        tempo_processor = TempoEstimationProcessor(fps=200)
-        tempos = tempo_processor(beats)
-        if len(tempos):
-            top_tempo = tempos[0][0]
-            adjusted_tempo = self.adjust_tempo(top_tempo)
-            with open(cache_file, "w") as f:
-                f.write(str(round(adjusted_tempo)))
-            self.result.emit(round(adjusted_tempo))
-        else:
-            self.result.emit(0)
-        self.quit()
 
     def adjust_tempo(self, tempo):
         while tempo < 70:
@@ -45,3 +43,10 @@ class TempoDetectionThread(QThread):
         while tempo > 190:
             tempo /= 2
         return tempo
+
+    def _load_cache(self, cache_file):
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                return int(f.read().strip())
+        except (OSError, ValueError):
+            return None

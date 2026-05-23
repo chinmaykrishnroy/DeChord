@@ -57,6 +57,11 @@ else
   echo "[DeChord] Dependencies already satisfied. Skipping install."
 fi
 
+echo "[DeChord] Preparing audio decoder..."
+if ! python -c "from audio_runtime import ensure_ffmpeg_available; raise SystemExit(0 if ensure_ffmpeg_available() else 1)"; then
+  echo "[DeChord] WARNING: FFmpeg could not be prepared. MP3/M4A/AAC analysis may fail."
+fi
+
 echo "[DeChord] Starting app..."
 python "$BASE_DIR/main.py"
 STATUS=$?

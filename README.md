@@ -14,6 +14,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 - **Key Recognition:** Detects the musical key of an audio file using the `madmom` library.
 - **Chord Recognition:** Identifies chords in the audio file with start and end times, also using the `madmom` library.
+- **Chord Label Normalization:** Normalizes detected chord labels into a consistent display format, with support for richer labels such as seventh, suspended, diminished, augmented, extended, altered, and slash chords when an analysis engine provides them.
 - **Real-Time Display:** Shows the current, previous, and next chords in real-time as the audio plays.
 
 ### Audio Playback
@@ -172,6 +173,8 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 ### Adding New Features
 
 To add new features, you can extend the existing classes or add new ones. Ensure to update the GUI (`interface.py`) and connect the new functionalities appropriately.
+
+For the advanced chord-recognition plan, see [ROADMAP.md](ROADMAP.md).
 
 ### Modifying the Theme
 

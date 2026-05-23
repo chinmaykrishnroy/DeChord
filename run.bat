@@ -73,6 +73,12 @@ if defined NEED_INSTALL (
   echo [DeChord] Dependencies already satisfied. Skipping install.
 )
 
+echo [DeChord] Preparing audio decoder...
+python -c "from audio_runtime import ensure_ffmpeg_available; raise SystemExit(0 if ensure_ffmpeg_available() else 1)"
+if errorlevel 1 (
+  echo [DeChord] WARNING: FFmpeg could not be prepared. MP3/M4A/AAC analysis may fail.
+)
+
 :RUNAPP
 echo [DeChord] Starting app...
 python "%PROJECT_DIR%main.py"

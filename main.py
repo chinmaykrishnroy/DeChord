@@ -1,7 +1,24 @@
-from interface import *
-from chords import *
-from key import *
-from tempo import *
+import os
+import sys
+import traceback
+
+from PyQt5.QtCore import Qt, QTimer, QUrl
+from PyQt5.QtGui import QIcon
+from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMainWindow
+
+from audio_runtime import ensure_ffmpeg_available, friendly_audio_error, playback_audio_path
+from chords import ChordRecognitionThread
+from interface import Ui_MainWindow
+from key import KeyRecognitionThread
+from tempo import TempoDetectionThread
+from theme import dark_theme, light_theme
+from timeline import chord_index_at_position
+from winshadow import enable_window_shadow
+
+MAIN_PAGE_INDEX = 0
+LOADING_PAGE_INDEX = 1
+ERROR_PAGE_INDEX = 2
 
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -19,7 +36,11 @@ class MainWindow(QMainWindow):
         self.start_time = None
         self.is_muted = False
         self.is_dark = True
-        self.load_stack = 1
+        self.analysis_id = 0
+        self.key = None
+        self.tempo = None
+        self.analysis_notes = []
+        self.analysis_threads = []
         self.setAcceptDrops(True)
 
         self.player = QMediaPlayer()
@@ -27,6 +48,7 @@ class MainWindow(QMainWindow):
         self.player.durationChanged.connect(self.update_duration)
         self.player.stateChanged.connect(self.update_state)
         self.player.mediaStatusChanged.connect(self.update_media)
+        self.player.error.connect(self.on_playback_error)
         
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_position)
@@ -55,7 +77,6 @@ class MainWindow(QMainWindow):
         self.is_dark = not self.is_dark
         self.ui.themeBtn.setIcon(QIcon(":/icons/sun.svg"if self.is_dark else":/icons/moon.svg"))
         self.setStyleSheet(dark_theme) if self.is_dark else self.setStyleSheet(light_theme)
-        self.load_stack = 1 if self.is_dark else 2
 
     def update_position(self):
         position = self.player.position()
@@ -76,17 +97,16 @@ class MainWindow(QMainWindow):
             self.timer.start(100)
 
     def seek(self, milliseconds):
-        new_position = self.player.position() + milliseconds
-        if new_position < 0 or new_position > self.player.duration():
-            self.set_position(0)
-            self.player.stop()
-        else:
-            self.player.setPosition(new_position)
-            self.update_chords(new_position)
+        duration = self.player.duration()
+        if duration <= 0:
+            return
+        new_position = max(0, min(self.player.position() + milliseconds, duration))
+        self.player.setPosition(new_position)
+        self.update_chords(new_position)
 
     def set_position(self, position):
         self.player.setPosition(position)
-        self.update_chords(position / 1000.0)
+        self.update_chords(position)
         
     def mute_unmute(self):
         self.is_muted = not self.is_muted
@@ -96,10 +116,7 @@ class MainWindow(QMainWindow):
 
     def update_chords(self, position):
         current_time = position  # position is in milliseconds
-        if self.chord_index > 0 and self.chord_index < len(self.chords) and self.chords[self.chord_index][1] > current_time / 1000.0:
-            self.chord_index = 0  # Reset index if seeking backward
-        while self.chord_index < len(self.chords) and self.chords[self.chord_index][1] <= current_time / 1000.0:
-            self.chord_index += 1
+        self.chord_index = chord_index_at_position(self.chords, current_time, self.chord_index)
 
         pre_previous_chord = previous_chord = current_chord = next_chord = post_next_chord = None
 
@@ -122,6 +139,8 @@ class MainWindow(QMainWindow):
             if chord_duration > 0:
                 slider_value = (time_elapsed / chord_duration) * 100
                 self.ui.chordSlider.setValue(int(slider_value))
+        else:
+            self.ui.chordSlider.setValue(0)
         
         self.ui.prePrevChordBtn.setText(f"{pre_previous_chord}" if pre_previous_chord else "")
         self.ui.prevChordBtn.setText(f"{previous_chord}" if previous_chord else "")
@@ -161,59 +180,151 @@ class MainWindow(QMainWindow):
             options = QFileDialog.Options()
             fileName, _ = QFileDialog.getOpenFileName(self, "Open Audio File", "", "Audio Files (*.wav *.mp3 *.m4a *.aac)", options=options)
         if fileName:
+            self.analysis_id += 1
+            analysis_id = self.analysis_id
             self.timer.stop()
             self.player.stop()
             self.player.setMedia(QMediaContent())
             self.ui.mediaProgressSlider.setValue(0)
             self.chord_index = 0
+            self.chords = []
+            self.key = None
+            self.tempo = None
+            self.analysis_notes = []
             self.ui.keyLabel.clear()
             self.audio_file = fileName
-            self.media_title = fileName.split("/")[-1].rsplit(".", 1)[0]
+            self.media_title = os.path.basename(fileName).rsplit(".", 1)[0]
             self.ui.mediaTitleLabel.setText(self.media_title)
             self.ui.errGif.start()
             self.ui.loadingGif.start()
-            self.ui.appStacks.setCurrentIndex(self.load_stack)
+            self.ui.errLabel.setText("Analyzing Chords")
+            self.ui.appStacks.setCurrentIndex(LOADING_PAGE_INDEX)
+            self.set_playback_controls_enabled(False)
+            if not ensure_ffmpeg_available():
+                self.on_analysis_error(
+                    analysis_id,
+                    "chords",
+                    "Could not find FFmpeg. Close the app, run run.bat once to install/update dependencies, then try again.",
+                )
+                return
+            try:
+                self.playback_file = playback_audio_path(fileName)
+            except Exception as e:
+                self.on_analysis_error(analysis_id, "chords", f"Could not prepare audio for playback: {e}")
+                return
             self.chord_thread = ChordRecognitionThread(fileName)
-            self.chord_thread.result.connect(self.on_chords_recognized)
-            self.chord_thread.start()
+            self.chord_thread.result.connect(lambda chords, analysis_id=analysis_id: self.on_chords_recognized(analysis_id, chords))
+            self.chord_thread.error.connect(lambda message, analysis_id=analysis_id: self.on_analysis_error(analysis_id, "chords", message))
+            self.start_analysis_thread(self.chord_thread)
             self.tempo_thread = TempoDetectionThread(fileName)
-            self.tempo_thread.result.connect(self.on_tempo_detected)
-            self.tempo_thread.start()
+            self.tempo_thread.result.connect(lambda tempo, analysis_id=analysis_id: self.on_tempo_detected(analysis_id, tempo))
+            self.tempo_thread.error.connect(lambda message, analysis_id=analysis_id: self.on_analysis_error(analysis_id, "tempo", message))
+            self.start_analysis_thread(self.tempo_thread)
             self.key_thread = KeyRecognitionThread(fileName)
-            self.key_thread.result.connect(self.on_key_recognized)
-            self.key_thread.start()
-            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(fileName)))
+            self.key_thread.result.connect(lambda key, analysis_id=analysis_id: self.on_key_recognized(analysis_id, key))
+            self.key_thread.error.connect(lambda message, analysis_id=analysis_id: self.on_analysis_error(analysis_id, "key", message))
+            self.start_analysis_thread(self.key_thread)
+            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(self.playback_file)))
 
-    def on_tempo_detected(self, tempo):
+    def on_tempo_detected(self, analysis_id, tempo):
+        if not self.is_active_analysis(analysis_id):
+            return
         self.tempo = tempo
-        current_text = self.ui.keyLabel.text()
-        if current_text:
-            updated_text = f"{current_text}  |  {tempo} BPM"
-            self.ui.keyLabel.setText(updated_text)
-        else: self.ui.keyLabel.setText(f"{tempo} BPM")
-        self.ui.keyLabel.show()
+        self.remove_analysis_note("Tempo unavailable")
+        self.refresh_key_tempo_label()
 
-    def on_chords_recognized(self, chords):
+    def on_chords_recognized(self, analysis_id, chords):
+        if not self.is_active_analysis(analysis_id):
+            return
         self.chords = chords
-        self.ui.appStacks.setCurrentIndex(0)
+        self.ui.appStacks.setCurrentIndex(MAIN_PAGE_INDEX)
         self.ui.errGif.stop()
         self.ui.loadingGif.stop()
-        self.play_pause()
-        self.ui.mediaProgressSlider.setEnabled(True)
-        self.ui.chordSlider.setEnabled(True)
-        self.ui.mediaPlayBtn.setEnabled(True)
-        self.ui.seekPrevBtn.setEnabled(True)
-        self.ui.seekNxtBtn.setEnabled(True)
-        self.ui.saveChordsBtn.setEnabled(True)
+        self.set_playback_controls_enabled(True)
+        self.start_playback()
 
-    def on_key_recognized(self, key):
+    def on_key_recognized(self, analysis_id, key):
+        if not self.is_active_analysis(analysis_id):
+            return
         self.key = key
-        current_text = self.ui.keyLabel.text()
-        if current_text:
-            updated_text = f"{current_text}  |  {key}"
-            self.ui.keyLabel.setText(updated_text)
-        else: self.ui.keyLabel.setText(key)
-        self.ui.keyLabel.show()
+        self.remove_analysis_note("Key unavailable")
+        self.refresh_key_tempo_label()
+
+    def on_analysis_error(self, analysis_id, source, message):
+        if not self.is_active_analysis(analysis_id):
+            return
+        if source == "chords":
+            self.ui.loadingGif.stop()
+            self.ui.errGif.start()
+            self.ui.errLabel.setText(friendly_audio_error(message))
+            self.ui.appStacks.setCurrentIndex(ERROR_PAGE_INDEX)
+            self.set_playback_controls_enabled(False)
+            return
+
+        note = "Key unavailable" if source == "key" else "Tempo unavailable"
+        if note not in self.analysis_notes:
+            self.analysis_notes.append(note)
+        self.refresh_key_tempo_label()
+
+    def refresh_key_tempo_label(self):
+        parts = []
+        if self.key:
+            parts.append(self.key)
+        if self.tempo is not None:
+            parts.append(f"{self.tempo} BPM")
+        parts.extend(self.analysis_notes)
+        if parts:
+            self.ui.keyLabel.setText("  |  ".join(parts))
+            self.ui.keyLabel.show()
+        else:
+            self.ui.keyLabel.hide()
+
+    def remove_analysis_note(self, note):
+        if note in self.analysis_notes:
+            self.analysis_notes.remove(note)
+
+    def is_active_analysis(self, analysis_id):
+        return analysis_id == self.analysis_id
+
+    def set_playback_controls_enabled(self, enabled):
+        self.ui.mediaProgressSlider.setEnabled(enabled)
+        self.ui.chordSlider.setEnabled(enabled)
+        self.ui.mediaPlayBtn.setEnabled(enabled)
+        self.ui.seekPrevBtn.setEnabled(enabled)
+        self.ui.seekNxtBtn.setEnabled(enabled)
+        self.ui.saveChordsBtn.setEnabled(enabled)
+
+    def start_playback(self):
+        self.player.play()
+        self.timer.start(100)
+        QTimer.singleShot(500, self.check_playback_started)
+
+    def check_playback_started(self):
+        if self.chords and self.player.state() != QMediaPlayer.PlayingState:
+            error_message = self.player.errorString()
+            if error_message:
+                self.ui.errLabel.setText(f"Playback could not start: {error_message}")
+            else:
+                self.ui.errLabel.setText("Playback could not start. Try pressing Play again.")
+            self.ui.errGif.start()
+            self.ui.appStacks.setCurrentIndex(ERROR_PAGE_INDEX)
+
+    def on_playback_error(self, error):
+        if error == QMediaPlayer.NoError:
+            return
+        message = self.player.errorString() or "The audio backend could not play this file."
+        self.ui.errLabel.setText(f"Playback error: {message}")
+        self.ui.errGif.start()
+        self.ui.appStacks.setCurrentIndex(ERROR_PAGE_INDEX)
+
+    def start_analysis_thread(self, thread):
+        self.analysis_threads.append(thread)
+        thread.finished.connect(lambda thread=thread: self.forget_analysis_thread(thread))
+        thread.start()
+
+    def forget_analysis_thread(self, thread):
+        if thread in self.analysis_threads:
+            self.analysis_threads.remove(thread)
 
     def export_chords(self):
         if self.chords:
@@ -281,8 +392,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     # Print exception details or handle them as needed
     traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-import traceback
-import sys
 sys.excepthook = handle_exception
 
 

@@ -418,6 +418,8 @@ class Ui_MainWindow(object):
 
         self.errLabel = QLabel(self.errWidget)
         self.errLabel.setObjectName(u"errLabel")
+        self.errLabel.setWordWrap(True)
+        self.errLabel.setMaximumWidth(1200)
 
         self.horizontalLayout_7.addWidget(self.errLabel)
 
