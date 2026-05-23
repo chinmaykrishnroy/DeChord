@@ -4,7 +4,7 @@ light_theme = """
     padding: 0px;
     margin: 0px;
     background-color: transparent;
-    font-family: "Segoe UI";
+    font-family: "Segoe UI", "Arial", "Tahoma";
 }
 
 QToolTip {
@@ -36,9 +36,11 @@ QLabel {
 	background: #DFE0E2
 }
 
-#errPage QLabel{
-    font-family: "Here Be Dubstep";
-	font-size: 48px
+#errLabel{
+    font-family: "Segoe UI";
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.25;
 }
 
 #loadingPage{
@@ -69,7 +71,7 @@ QLabel {
 	background: #216869;
 }
 
-#header QLabel{
+#appNameLabel{
 	font-family: "Here Be Dubstep";
 	color: #ffffff;
 	font-size: 56px;
@@ -197,24 +199,40 @@ QLabel {
 }
 
 #currentChordBtn{
+	font-family: "Segoe UI";
 	background: #23B5D3;
 	border-radius: 8px;
-	font-size: 45px;
+	padding: 0px;
     font-weight: bold
 }
 
 #nxtChordBtn, #prevChordBtn{
+	font-family: "Segoe UI";
 	background: #12a4c2;
 	border-radius: 8px;
-	font-size: 34px;
+	padding: 0px;
     font-weight: bold
 }
 
 #postNxtChordBtn, #prePrevChordBtn{
+	font-family: "Segoe UI";
 	background: #12a4c2;
 	border-radius: 8px;
-	font-size: 22px;
+	padding: 0px;
     font-weight: bold
+}
+
+#chordDetailsWidget{
+	margin: 2px 8px;
+}
+
+#chordTypeLabel, #chordNotesLabel{
+	font-family: "Segoe UI";
+	font-size: 16px;
+	padding: 3px 8px;
+	border-radius: 6px;
+	background: #d8d7dc;
+	color: #071013;
 }
 
 #keyLabel{
@@ -255,7 +273,7 @@ dark_theme = """
     padding: 0px;
     margin: 0px;
     background-color: transparent;
-    font-family: "Segoe UI";
+    font-family: "Segoe UI", "Arial", "Tahoma";
 }
 
 QToolTip {
@@ -286,9 +304,11 @@ QLabel {
 	background: #071013
 }
 
-#errPage QLabel{
-    font-family: "Here Be Dubstep";
-	font-size: 48px
+#errLabel{
+    font-family: "Segoe UI";
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.25;
 }
 
 #loadingPage{
@@ -319,7 +339,7 @@ QLabel {
 	background: #010101;
 }
 
-#header QLabel{
+#appNameLabel{
 	font-family: "Here Be Dubstep";
 	color: #ffffff;
 	font-size: 56px;
@@ -447,24 +467,40 @@ QLabel {
 }
 
 #currentChordBtn{
+	font-family: "Segoe UI";
 	background: #440D44;
 	border-radius: 8px;
-	font-size: 45px;
+	padding: 0px;
     font-weight: bold
 }
 
 #nxtChordBtn, #prevChordBtn{
+	font-family: "Segoe UI";
 	background: #330D33;
 	border-radius: 8px;
-	font-size: 34px;
+	padding: 0px;
     font-weight: bold
 }
 
 #postNxtChordBtn, #prePrevChordBtn{
+	font-family: "Segoe UI";
 	background: #330D33;
 	border-radius: 8px;
-	font-size: 22px;
+	padding: 0px;
     font-weight: bold
+}
+
+#chordDetailsWidget{
+	margin: 2px 8px;
+}
+
+#chordTypeLabel, #chordNotesLabel{
+	font-family: "Segoe UI";
+	font-size: 16px;
+	padding: 3px 8px;
+	border-radius: 6px;
+	background: #191D32;
+	color: #DFE0E2;
 }
 
 #keyLabel{

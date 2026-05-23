@@ -18,9 +18,9 @@ DeChord should focus on being an offline, privacy-friendly desktop tool for musi
 
 ## Phase 2: Chord Vocabulary Foundation
 
-- Add a first-class internal chord model with root, quality, extensions, alterations, bass note, display label, and source label.
-- Normalize labels from different engines into one consistent display system.
-- Support richer chord labels in the UI and exports:
+- Add a first-class internal chord model with root, quality, extensions, alterations, bass note, display label, and source label. Done.
+- Normalize labels from different engines into one consistent display system. Done.
+- Support richer chord labels in the UI and exports. Done for parsing, display, chord notes, and enhanced export metadata:
   - major, minor
   - dominant 7, major 7, minor 7
   - diminished, half-diminished, augmented
@@ -32,11 +32,13 @@ DeChord should focus on being an offline, privacy-friendly desktop tool for musi
 
 ## Phase 3: Recognition Engine Abstraction
 
-- Wrap the current `madmom` integration behind an engine interface.
-- Keep `madmom` as the fast/basic engine.
-- Add experimental advanced engines behind settings:
-  - Chordino/NNLS Chroma for a configurable chord dictionary path.
-  - BTC or another transformer-based model for large-vocabulary chord recognition.
+- Wrap the current `madmom` integration behind an engine interface. Done.
+- Make `lv-chordia` the native/default chord engine for large-vocabulary PyTorch chord recognition. Done.
+- Keep `madmom` as the fast/basic fallback engine. Done.
+- Run `lv-chordia` in an isolated worker process so PyQt and Torch do not fight over native Windows DLL loading. Done.
+- Keep optional comparison engines on the research backlog:
+  - Chordino/NNLS Chroma as a possible lightweight comparison engine.
+  - BTC or another transformer-based model as a possible future comparison engine.
 - Store engine name, engine version, confidence, and analysis parameters in cache metadata.
 - Add a comparison script for evaluating engines on a folder of test songs.
 

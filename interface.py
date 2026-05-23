@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
     QMainWindow, QPushButton, QSizePolicy, QSlider, QFileDialog,
     QSpacerItem, QStackedWidget, QVBoxLayout, QWidget)
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from animated_widgets import AnimatedChordButton
 import res
 from theme import light_theme, dark_theme
 from winshadow import enable_window_shadow
@@ -48,6 +49,15 @@ class Ui_MainWindow(object):
         # font_family = QFontDatabase.applicationFontFamilies(font_id)
         # print(font_family)
         QFontDatabase.addApplicationFont(":/fonts/here-be-dubstep-font/HereBeDubstepRegular-JDaB.ttf")
+        for font_path in (
+            r"C:\Windows\Fonts\segoeui.ttf",
+            r"C:\Windows\Fonts\arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        ):
+            if os.path.exists(font_path):
+                QFontDatabase.addApplicationFont(font_path)
+                break
+        QApplication.setFont(QFont("Segoe UI"))
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
         self.verticalLayout.setSpacing(0)
@@ -219,7 +229,8 @@ class Ui_MainWindow(object):
         self.chordsWidgetHLayout.setContentsMargins(0, 0, 0, 0)
         self.seekPrevBtn = QPushButton(self.chordsWidget)
         self.seekPrevBtn.setObjectName(u"seekPrevBtn")
-        self.seekPrevBtn.setMinimumSize(QSize(28, 28))
+        self.seekPrevBtn.setMinimumSize(QSize(30, 30))
+        self.seekPrevBtn.setMaximumSize(QSize(30, 30))
         icon6 = QIcon()
         icon6.addFile(u":/icons/left-arrow-svgrepo-com.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.seekPrevBtn.setIcon(icon6)
@@ -229,42 +240,43 @@ class Ui_MainWindow(object):
 
         self.prePrevChordBtn = QPushButton(self.chordsWidget)
         self.prePrevChordBtn.setObjectName(u"prePrevChordBtn")
-        self.prePrevChordBtn.setMinimumSize(QSize(50, 50))
-        self.prePrevChordBtn.setMaximumSize(QSize(1000, 1000))
+        self.prePrevChordBtn.setMinimumSize(QSize(46, 46))
+        self.prePrevChordBtn.setMaximumSize(QSize(46, 46))
 
         self.chordsWidgetHLayout.addWidget(self.prePrevChordBtn, 0, Qt.AlignVCenter)
 
         self.prevChordBtn = QPushButton(self.chordsWidget)
         self.prevChordBtn.setObjectName(u"prevChordBtn")
-        self.prevChordBtn.setMinimumSize(QSize(75, 75))
-        self.prevChordBtn.setMaximumSize(QSize(1000, 1000))
+        self.prevChordBtn.setMinimumSize(QSize(68, 68))
+        self.prevChordBtn.setMaximumSize(QSize(68, 68))
 
         self.chordsWidgetHLayout.addWidget(self.prevChordBtn, 0, Qt.AlignVCenter)
 
-        self.currentChordBtn = QPushButton(self.chordsWidget)
+        self.currentChordBtn = AnimatedChordButton(self.chordsWidget)
         self.currentChordBtn.setObjectName(u"currentChordBtn")
-        self.currentChordBtn.setMinimumSize(QSize(100, 100))
-        self.currentChordBtn.setMaximumSize(QSize(1000, 1000))
+        self.currentChordBtn.setMinimumSize(QSize(108, 108))
+        self.currentChordBtn.setMaximumSize(QSize(108, 108))
 
         self.chordsWidgetHLayout.addWidget(self.currentChordBtn, 0, Qt.AlignVCenter)
 
         self.nxtChordBtn = QPushButton(self.chordsWidget)
         self.nxtChordBtn.setObjectName(u"nxtChordBtn")
-        self.nxtChordBtn.setMinimumSize(QSize(75, 75))
-        self.nxtChordBtn.setMaximumSize(QSize(1000, 1000))
+        self.nxtChordBtn.setMinimumSize(QSize(68, 68))
+        self.nxtChordBtn.setMaximumSize(QSize(68, 68))
 
         self.chordsWidgetHLayout.addWidget(self.nxtChordBtn, 0, Qt.AlignVCenter)
 
         self.postNxtChordBtn = QPushButton(self.chordsWidget)
         self.postNxtChordBtn.setObjectName(u"postNxtChordBtn")
-        self.postNxtChordBtn.setMinimumSize(QSize(50, 50))
-        self.postNxtChordBtn.setMaximumSize(QSize(1000, 1000))
+        self.postNxtChordBtn.setMinimumSize(QSize(46, 46))
+        self.postNxtChordBtn.setMaximumSize(QSize(46, 46))
 
         self.chordsWidgetHLayout.addWidget(self.postNxtChordBtn, 0, Qt.AlignVCenter)
 
         self.seekNxtBtn = QPushButton(self.chordsWidget)
         self.seekNxtBtn.setObjectName(u"seekNxtBtn")
-        self.seekNxtBtn.setMinimumSize(QSize(28, 28))
+        self.seekNxtBtn.setMinimumSize(QSize(30, 30))
+        self.seekNxtBtn.setMaximumSize(QSize(30, 30))
         icon7 = QIcon()
         icon7.addFile(u":/icons/right-arrow-svgrepo-com.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.seekNxtBtn.setIcon(icon7)
@@ -274,6 +286,27 @@ class Ui_MainWindow(object):
 
 
         self.verticalLayout_2.addWidget(self.chordsWidget)
+
+        self.chordDetailsWidget = QWidget(self.mainBody)
+        self.chordDetailsWidget.setObjectName(u"chordDetailsWidget")
+        self.chordDetailsLayout = QHBoxLayout(self.chordDetailsWidget)
+        self.chordDetailsLayout.setSpacing(8)
+        self.chordDetailsLayout.setContentsMargins(8, 2, 8, 2)
+        self.chordTypeLabel = QLabel(self.chordDetailsWidget)
+        self.chordTypeLabel.setObjectName(u"chordTypeLabel")
+        self.chordTypeLabel.setAlignment(Qt.AlignCenter)
+        self.chordTypeLabel.setWordWrap(True)
+        self.chordTypeLabel.setMinimumWidth(150)
+        self.chordNotesLabel = QLabel(self.chordDetailsWidget)
+        self.chordNotesLabel.setObjectName(u"chordNotesLabel")
+        self.chordNotesLabel.setAlignment(Qt.AlignCenter)
+        self.chordNotesLabel.setWordWrap(True)
+        self.chordNotesLabel.setMinimumWidth(150)
+
+        self.chordDetailsLayout.addWidget(self.chordTypeLabel)
+        self.chordDetailsLayout.addWidget(self.chordNotesLabel)
+
+        self.verticalLayout_2.addWidget(self.chordDetailsWidget)
 
         self.mediaPlayer = QWidget(self.mainBody)
         self.mediaPlayer.setObjectName(u"mediaPlayer")
@@ -487,6 +520,7 @@ class Ui_MainWindow(object):
         self.saveChordsBtn.setEnabled(False)
         self.chordSlider.setEnabled(False)
         self.keyLabel.hide()
+        self.chordDetailsWidget.hide()
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
@@ -511,7 +545,7 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.mediaOpenBtn.setText("")
 #if QT_CONFIG(tooltip)
-        self.saveChordsBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Export Chords as Text File", None))
+        self.saveChordsBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Export Chords", None))
 #endif // QT_CONFIG(tooltip)
         self.saveChordsBtn.setText("")
 #if QT_CONFIG(tooltip)
@@ -546,6 +580,11 @@ class Ui_MainWindow(object):
         self.postNxtChordBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Next After Next Chord", None))
 #endif // QT_CONFIG(tooltip)
         self.postNxtChordBtn.setText(QCoreApplication.translate("MainWindow", u"\u2600", None))
+#if QT_CONFIG(tooltip)
+        self.chordDetailsWidget.setToolTip(QCoreApplication.translate("MainWindow", u"Chord Details", None))
+#endif // QT_CONFIG(tooltip)
+        self.chordTypeLabel.setText(QCoreApplication.translate("MainWindow", u"", None))
+        self.chordNotesLabel.setText(QCoreApplication.translate("MainWindow", u"", None))
 #if QT_CONFIG(tooltip)
         self.seekNxtBtn.setToolTip(QCoreApplication.translate("MainWindow", u"Seek 10s After", None))
 #endif // QT_CONFIG(tooltip)

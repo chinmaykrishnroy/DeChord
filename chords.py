@@ -1,36 +1,37 @@
 from PyQt5.QtCore import QThread, pyqtSignal
-import madmom
 from analysis_cache import cache_file_for_audio
-from chord_types import normalize_chord_label
+from chord_engines import DEFAULT_CHORD_ENGINE, DEFAULT_LV_CHORDIA_DICT, get_chord_engine
 
 class ChordRecognitionThread(QThread):
     result = pyqtSignal(list)
+    engine_ready = pyqtSignal(str)
     error = pyqtSignal(str)
 
-    def __init__(self, audio_path):
+    def __init__(self, audio_path, engine_name=DEFAULT_CHORD_ENGINE, chord_dict_name=DEFAULT_LV_CHORDIA_DICT):
         super().__init__()
         self.audio_path = audio_path
+        self.engine_name = engine_name
+        self.chord_dict_name = chord_dict_name
 
     def run(self):
         try:
-            cache_file = cache_file_for_audio(self.audio_path, "cache/chord/", engine_id="madmom-chords-v1")
+            engine = get_chord_engine(self.engine_name, self.chord_dict_name)
+            self.engine_ready.emit(engine.name)
+            cache_file = cache_file_for_audio(self.audio_path, "cache/chord/", engine_id=engine.cache_id)
             cached_chords = self._load_cache(cache_file)
             if cached_chords is not None:
                 self.result.emit(cached_chords)
                 return
 
-            feat_processor = madmom.features.chords.CNNChordFeatureProcessor()
-            recog_processor = madmom.features.chords.CRFChordRecognitionProcessor()
-            feats = feat_processor(self.audio_path)
-            chords = recog_processor(feats)
-            formatted_chords = []
+            chords = engine.recognize(self.audio_path)
+            active_engine = getattr(engine, "last_engine_name", None)
+            if active_engine:
+                self.engine_ready.emit(active_engine)
             with open(cache_file, "w", encoding="utf-8") as f:
                 for chord in chords:
                     start_time, end_time, chord_label = chord
-                    display_label = normalize_chord_label(chord_label)
-                    formatted_chords.append((start_time, end_time, display_label))
-                    f.write(f"{start_time},{end_time},{display_label}\n")
-            self.result.emit(formatted_chords)
+                    f.write(f"{start_time},{end_time},{chord_label}\n")
+            self.result.emit(chords)
         except Exception as e:
             self.error.emit(f"Chord analysis failed: {e}")
         finally:

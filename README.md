@@ -13,8 +13,10 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 ### Key and Chord Recognition
 
 - **Key Recognition:** Detects the musical key of an audio file using the `madmom` library.
-- **Chord Recognition:** Identifies chords in the audio file with start and end times, also using the `madmom` library.
+- **Chord Recognition:** Identifies chords in the audio file with start and end times.
+- **Native Chord Engine:** Uses `lv-chordia` as the default large-vocabulary chord engine, with `madmom` kept as the secondary fallback engine.
 - **Chord Label Normalization:** Normalizes detected chord labels into a consistent display format, with support for richer labels such as seventh, suspended, diminished, augmented, extended, altered, and slash chords when an analysis engine provides them.
+- **Chord Details:** Shows the current chord quality and note spelling while the song plays.
 - **Real-Time Display:** Shows the current, previous, and next chords in real-time as the audio plays.
 
 ### Audio Playback
@@ -31,6 +33,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 - **Progress Slider:** Displays and controls the current position within the audio file.
 - **Key Display:** Shows the detected musical key.
 - **Export Chords:** Export recognized chords to a text file.
+- **Enhanced Exports:** Saves chord timelines with quality, notes, and bass information in text, CSV, and JSON formats.
 - **Keyboard Shortcuts:** Various keyboard shortcuts for quick access to functions.
 
 ### Additional Features
@@ -44,7 +47,8 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 - **Python:** The primary programming language used for development.
 - **PyQt5:** For building the graphical user interface.
-- **madmom:** A library for music signal processing, used for key and chord recognition.
+- **lv-chordia:** Large-vocabulary chord recognition for seventh, suspended, diminished, augmented, extended, altered, and slash chords.
+- **madmom:** Music signal processing library used for key/tempo analysis and as the fallback chord engine.
 
 ## Windows Installation 
 
@@ -60,16 +64,19 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
    ```bash
    git clone https://github.com/chinmaykrishnroy/DeChord.git
    cd DeChord
+   ```
 
-2. Run the run.bat script for the first time:
+2. Run the main script. It creates the virtual environment, installs all dependencies, prepares FFmpeg, and starts the app:
 
    ```bash
    run.bat
+   ```
 
-3. Run the createWindowsShortcut.bat to generate a shortcut for the application:
+3. Run `createWindowsShortcut.bat` to generate a shortcut for the application:
 
    ```bash
    createWindowsShortcut.bat
+   ```
 
 4. <b> Use the shortcut file 'DeChord' to open the application from next time. </b>
 
@@ -87,18 +94,30 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
    ```bash
    git clone https://github.com/chinmaykrishnroy/DeChord.git
    cd DeChord
+   ```
 
-2. Build and run the run.sh script for the first time:
+2. Build and run the main script:
 
    ```bash
    chmod +x run.sh && ./run.sh
+   ```
 
-3. Run the createLinuxShortcut.sh to generate Desktop shortcut for the application:
+3. Run `createLinuxShortcut.sh` to generate Desktop shortcut for the application:
 
    ```bash
    chmod +x createLinuxShortcut.sh && ./createLinuxShortcut.sh
+   ```
 
 4. <b> Use the Desktop Shortcut file 'DeChord' to open the application from the next time. </b>
+
+### Chord Engine Settings
+
+`run.bat` and `run.sh` install `lv-chordia` as the native chord engine. If it is unavailable at runtime, DeChord falls back to `madmom` so the app remains usable.
+
+Engine settings can be overridden with environment variables:
+
+- `DECHORD_CHORD_ENGINE=lv-chordia`, `madmom`, or `auto`
+- `DECHORD_CHORD_DICT=submission`, `ismir2017`, or `full`
 
 ## How to Use
 
@@ -123,7 +142,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 ### Exporting Chords
 
-- Click the **Save Chords** button to export the recognized chords to a text file.
+- Click the **Save Chords** button to export the recognized chord timeline to text, CSV, and JSON.
 
 ### Toggling Theme
 
@@ -153,6 +172,8 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 - **main.py:** The entry point of the application.
 - **interface.py:** Contains the GUI layout and setup.
 - **chords.py:** Functions and classes related to chord recognition.
+- **chord_engines.py:** Engine selection and fallback logic for `lv-chordia` and `madmom`.
+- **advanced_chord_worker.py:** Isolated subprocess worker for the PyTorch-based `lv-chordia` engine.
 - **key.py:** Functions and classes related to key recognition.
 - **icons/:** Directory containing icon files.
 - **export/:** Directory where exported chord files are saved.
@@ -174,7 +195,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 To add new features, you can extend the existing classes or add new ones. Ensure to update the GUI (`interface.py`) and connect the new functionalities appropriately.
 
-For the advanced chord-recognition plan, see [ROADMAP.md](ROADMAP.md).
+For the chord-recognition product plan, see [ROADMAP.md](ROADMAP.md).
 
 ### Modifying the Theme
 
@@ -204,7 +225,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Libraries and Tools
 
-- **madmom:** For music signal processing algorithms.
+- **lv-chordia:** For large-vocabulary chord recognition.
+- **madmom:** For music signal processing algorithms and fallback chord recognition.
 - **PyQt5:** For the GUI framework.
 - **Python:** The programming language used.
 

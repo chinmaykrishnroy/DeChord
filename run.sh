@@ -29,8 +29,8 @@ source "$VENV_DIR/bin/activate"
 # Always deactivate when the script exits (normal or error)
 trap 'deactivate >/dev/null 2>&1 || true' EXIT
 
-# Keep tooling fresh (quietly)
-python -m pip install --upgrade pip setuptools wheel >/dev/null
+# Keep tooling fresh (quietly); setuptools<82 keeps the advanced torch stack satisfied.
+python -m pip install --upgrade pip wheel "setuptools<82" >/dev/null
 
 # Compute a stamp from Python/pip versions + requirements content
 calc_hash() {

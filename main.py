@@ -1,14 +1,18 @@
+import csv
+import json
 import os
 import sys
 import traceback
 
 from PyQt5.QtCore import Qt, QTimer, QUrl
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QFontMetrics, QIcon
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from audio_runtime import ensure_ffmpeg_available, friendly_audio_error, playback_audio_path
+from chord_types import parse_chord_label
 from chords import ChordRecognitionThread
+from export_utils import build_chord_export_rows
 from interface import Ui_MainWindow
 from key import KeyRecognitionThread
 from tempo import TempoDetectionThread
@@ -41,6 +45,9 @@ class MainWindow(QMainWindow):
         self.tempo = None
         self.analysis_notes = []
         self.analysis_threads = []
+        self.current_chord_display_index = None
+        self.chord_engine_name = os.environ.get("DECHORD_CHORD_ENGINE", "lv-chordia")
+        self.chord_dict_name = os.environ.get("DECHORD_CHORD_DICT", "submission")
         self.setAcceptDrops(True)
 
         self.player = QMediaPlayer()
@@ -119,6 +126,7 @@ class MainWindow(QMainWindow):
         self.chord_index = chord_index_at_position(self.chords, current_time, self.chord_index)
 
         pre_previous_chord = previous_chord = current_chord = next_chord = post_next_chord = None
+        current_chord_progress = 0.0
 
         if self.chord_index < len(self.chords):
             current_chord = self.chords[self.chord_index][2]
@@ -137,16 +145,28 @@ class MainWindow(QMainWindow):
             chord_duration = current_chord_end_time - current_chord_start_time
             time_elapsed = (current_time / 1000.0) - current_chord_start_time
             if chord_duration > 0:
-                slider_value = (time_elapsed / chord_duration) * 100
-                self.ui.chordSlider.setValue(int(slider_value))
+                current_chord_progress = max(0.0, min(1.0, time_elapsed / chord_duration))
+                self.ui.chordSlider.setValue(int(current_chord_progress * 100))
         else:
             self.ui.chordSlider.setValue(0)
-        
-        self.ui.prePrevChordBtn.setText(f"{pre_previous_chord}" if pre_previous_chord else "")
-        self.ui.prevChordBtn.setText(f"{previous_chord}" if previous_chord else "")
-        self.ui.currentChordBtn.setText(f"{current_chord}" if current_chord else "")
-        self.ui.nxtChordBtn.setText(f"{next_chord}" if next_chord else "")
-        self.ui.postNxtChordBtn.setText(f"{post_next_chord}" if post_next_chord else "")
+            self.current_chord_display_index = None
+
+        if hasattr(self.ui.currentChordBtn, "animate_progress"):
+            self.ui.currentChordBtn.animate_progress(current_chord_progress)
+        elif hasattr(self.ui.currentChordBtn, "set_progress"):
+            self.ui.currentChordBtn.set_progress(current_chord_progress)
+
+        if current_chord and self.current_chord_display_index != self.chord_index:
+            self.current_chord_display_index = self.chord_index
+            if hasattr(self.ui.currentChordBtn, "trigger_pulse"):
+                self.ui.currentChordBtn.trigger_pulse()
+
+        self.set_chord_button_text(self.ui.prePrevChordBtn, pre_previous_chord, 20)
+        self.set_chord_button_text(self.ui.prevChordBtn, previous_chord, 30)
+        self.set_chord_button_text(self.ui.currentChordBtn, current_chord, 40)
+        self.set_chord_button_text(self.ui.nxtChordBtn, next_chord, 30)
+        self.set_chord_button_text(self.ui.postNxtChordBtn, post_next_chord, 20)
+        self.update_chord_info(current_chord)
 
     def update_media(self, status):
         if status == QMediaPlayer.EndOfMedia:
@@ -187,11 +207,16 @@ class MainWindow(QMainWindow):
             self.player.setMedia(QMediaContent())
             self.ui.mediaProgressSlider.setValue(0)
             self.chord_index = 0
+            self.current_chord_display_index = None
             self.chords = []
             self.key = None
             self.tempo = None
+            self.active_chord_engine = None
             self.analysis_notes = []
             self.ui.keyLabel.clear()
+            self.ui.chordTypeLabel.clear()
+            self.ui.chordNotesLabel.clear()
+            self.ui.chordDetailsWidget.hide()
             self.audio_file = fileName
             self.media_title = os.path.basename(fileName).rsplit(".", 1)[0]
             self.ui.mediaTitleLabel.setText(self.media_title)
@@ -212,7 +237,8 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 self.on_analysis_error(analysis_id, "chords", f"Could not prepare audio for playback: {e}")
                 return
-            self.chord_thread = ChordRecognitionThread(fileName)
+            self.chord_thread = ChordRecognitionThread(fileName, self.chord_engine_name, self.chord_dict_name)
+            self.chord_thread.engine_ready.connect(lambda engine, analysis_id=analysis_id: self.on_chord_engine_ready(analysis_id, engine))
             self.chord_thread.result.connect(lambda chords, analysis_id=analysis_id: self.on_chords_recognized(analysis_id, chords))
             self.chord_thread.error.connect(lambda message, analysis_id=analysis_id: self.on_analysis_error(analysis_id, "chords", message))
             self.start_analysis_thread(self.chord_thread)
@@ -231,6 +257,12 @@ class MainWindow(QMainWindow):
             return
         self.tempo = tempo
         self.remove_analysis_note("Tempo unavailable")
+        self.refresh_key_tempo_label()
+
+    def on_chord_engine_ready(self, analysis_id, engine_name):
+        if not self.is_active_analysis(analysis_id):
+            return
+        self.active_chord_engine = engine_name
         self.refresh_key_tempo_label()
 
     def on_chords_recognized(self, analysis_id, chords):
@@ -272,6 +304,8 @@ class MainWindow(QMainWindow):
             parts.append(self.key)
         if self.tempo is not None:
             parts.append(f"{self.tempo} BPM")
+        if getattr(self, "active_chord_engine", None):
+            parts.append(f"Engine: {self.active_chord_engine}")
         parts.extend(self.analysis_notes)
         if parts:
             self.ui.keyLabel.setText("  |  ".join(parts))
@@ -293,6 +327,56 @@ class MainWindow(QMainWindow):
         self.ui.seekPrevBtn.setEnabled(enabled)
         self.ui.seekNxtBtn.setEnabled(enabled)
         self.ui.saveChordsBtn.setEnabled(enabled)
+
+    def set_chord_button_text(self, button, chord_label, base_size):
+        label = chord_label or ""
+        button.setText(label)
+
+        font = button.font()
+        if hasattr(font, "setFamilies"):
+            font.setFamilies(["Segoe UI", "Arial", "Tahoma"])
+        else:
+            font.setFamily("Segoe UI")
+        font.setBold(True)
+        button_width = button.width() if button.width() > 0 else button.minimumWidth()
+        button_height = button.height() if button.height() > 0 else button.minimumHeight()
+        if button.maximumWidth() < 16777215:
+            button_width = min(button_width, button.maximumWidth())
+        if button.maximumHeight() < 16777215:
+            button_height = min(button_height, button.maximumHeight())
+        button_width = max(button_width, button.minimumWidth())
+        button_height = max(button_height, button.minimumHeight())
+        max_width = max(16, button_width - 8)
+        max_height = max(16, button_height - 8)
+
+        for size in range(base_size, 9, -1):
+            font.setPixelSize(size)
+            metrics = QFontMetrics(font)
+            if metrics.horizontalAdvance(label) <= max_width and metrics.height() <= max_height:
+                break
+        else:
+            font.setPixelSize(10)
+
+        button.setFont(font)
+
+    def update_chord_info(self, chord_label):
+        if not chord_label:
+            self.ui.chordDetailsWidget.hide()
+            return
+
+        chord = parse_chord_label(chord_label)
+        if chord.is_no_chord:
+            self.ui.chordTypeLabel.setText("Type: No chord")
+            self.ui.chordNotesLabel.setText("Notes: -")
+        elif chord.root is None:
+            self.ui.chordTypeLabel.setText("Type: Unknown")
+            self.ui.chordNotesLabel.setText("Notes: -")
+        else:
+            notes = " ".join(chord.notes) if chord.notes else "-"
+            bass = f" | Bass: {chord.bass}" if chord.bass else ""
+            self.ui.chordTypeLabel.setText(f"Type: {chord.quality_name}")
+            self.ui.chordNotesLabel.setText(f"Notes: {notes}{bass}")
+        self.ui.chordDetailsWidget.show()
 
     def start_playback(self):
         self.player.play()
@@ -329,11 +413,25 @@ class MainWindow(QMainWindow):
     def export_chords(self):
         if self.chords:
             os.makedirs('./export', exist_ok=True)
-            file_path = f"./export/{self.media_title}.txt"
-            with open(file_path, 'w') as file:
-                for chord in self.chords:
-                    start_time, end_time, chord_label = chord
-                    file.write(f"({self.format_time(start_time)} - {self.format_time(end_time)}): {chord_label}\n")
+            rows = self.chord_export_rows()
+            txt_path = f"./export/{self.media_title}.txt"
+            csv_path = f"./export/{self.media_title}.csv"
+            json_path = f"./export/{self.media_title}.json"
+
+            with open(txt_path, 'w', encoding="utf-8") as file:
+                for row in rows:
+                    file.write(f"({row['start']} - {row['end']}): {row['label']} | {row['quality']} | {row['notes']}\n")
+
+            with open(csv_path, 'w', newline="", encoding="utf-8") as file:
+                writer = csv.DictWriter(file, fieldnames=["start", "end", "label", "quality", "notes", "bass"])
+                writer.writeheader()
+                writer.writerows(rows)
+
+            with open(json_path, 'w', encoding="utf-8") as file:
+                json.dump(rows, file, indent=2)
+
+    def chord_export_rows(self):
+        return build_chord_export_rows(self.chords, self.format_time)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():

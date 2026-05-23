@@ -39,8 +39,8 @@ if errorlevel 1 (
   popd & exit /b 1
 )
 
-:: --- Keep packaging tools fresh (quietly)
-python -m pip install --upgrade pip setuptools wheel >nul 2>&1
+:: --- Keep packaging tools fresh (quietly); setuptools<82 keeps the advanced torch stack satisfied.
+python -m pip install --upgrade pip wheel "setuptools<82" >nul 2>&1
 
 :: --- Compute a stamp: python/pip versions + requirements content (single-line Python)
 set "NEWHASH="
