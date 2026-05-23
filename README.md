@@ -50,7 +50,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 - **lv-chordia:** Large-vocabulary chord recognition for seventh, suspended, diminished, augmented, extended, altered, and slash chords.
 - **madmom:** Music signal processing library used for key/tempo analysis and as the fallback chord engine.
 
-## Windows Installation 
+## Windows Installation
 
 ### Prerequisites
 
@@ -80,7 +80,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 4. <b> Use the shortcut file 'DeChord' to open the application from next time. </b>
 
-## Linux/MacOS Installation 
+## Linux/MacOS Installation
 
 ### Prerequisites
 
@@ -254,5 +254,3 @@ Thank you for using DeChord! I hope it helps you in your musical journey.
 ![Screenshot (6)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/318b373d-1896-4549-9d0a-7b9a290b9744)
 ![Screenshot (5)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/09d12110-2b0c-4de9-bf04-4eedbca234f5)
 ![image](https://github.com/user-attachments/assets/8c1966eb-27f2-4a5f-9cc4-b1ea8785847b)
-   
- 
