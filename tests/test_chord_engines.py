@@ -16,6 +16,19 @@ class ChordEngineSelectionTest(unittest.TestCase):
             with patch("chord_engines.MadmomChordEngine.recognize", return_value=[(0.0, 1.0, "C")]):
                 self.assertEqual(engine.recognize("song.mp3"), [(0.0, 1.0, "C")])
                 self.assertEqual(engine.last_engine_name, "madmom")
+                self.assertEqual(engine.active_cache_id(), "madmom-chords-v1")
+
+    def test_primary_cache_prefers_native_engine_when_available(self):
+        with patch("importlib.util.find_spec", return_value=True):
+            engine = get_chord_engine("lv-chordia", "submission")
+            self.assertEqual(engine.preferred_cache_id(), "lv-chordia-submission-v1")
+            self.assertEqual(engine.engine_name_for_cache_id(engine.preferred_cache_id()), "lv-chordia")
+
+    def test_primary_cache_uses_fallback_scope_when_native_engine_is_missing(self):
+        with patch("importlib.util.find_spec", return_value=None):
+            engine = get_chord_engine("lv-chordia", "submission")
+            self.assertEqual(engine.preferred_cache_id(), "madmom-chords-v1")
+            self.assertEqual(engine.engine_name_for_cache_id(engine.preferred_cache_id()), "madmom")
 
     def test_direct_lv_chordia_raises_when_missing(self):
         with patch("importlib.util.find_spec", return_value=None):
@@ -47,6 +60,7 @@ class ChordEngineSelectionTest(unittest.TestCase):
             engine = get_chord_engine("lv-chordia")
             self.assertEqual(engine.recognize("song.mp3"), [(0.0, 1.0, "C")])
             self.assertEqual(engine.last_engine_name, "madmom")
+            self.assertEqual(engine.active_cache_id(), "madmom-chords-v1")
 
 
 if __name__ == "__main__":

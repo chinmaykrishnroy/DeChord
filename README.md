@@ -32,7 +32,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 - **Theme Toggle:** Switch between dark and light themes.
 - **Progress Slider:** Displays and controls the current position within the audio file.
 - **Key Display:** Shows the detected musical key.
-- **Export Chords:** Export recognized chords to a text file.
+- **Export Chords:** Export recognized chord timelines.
 - **Enhanced Exports:** Saves chord timelines with quality, notes, and bass information in text, CSV, and JSON formats.
 - **Keyboard Shortcuts:** Various keyboard shortcuts for quick access to functions.
 
@@ -110,14 +110,15 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 4. <b> Use the Desktop Shortcut file 'DeChord' to open the application from the next time. </b>
 
-### Chord Engine Settings
+### Runtime Settings
 
 `run.bat` and `run.sh` install `lv-chordia` as the native chord engine. If it is unavailable at runtime, DeChord falls back to `madmom` so the app remains usable.
 
-Engine settings can be overridden with environment variables:
+Runtime settings can be overridden with environment variables:
 
 - `DECHORD_CHORD_ENGINE=lv-chordia`, `madmom`, or `auto`
 - `DECHORD_CHORD_DICT=submission`, `ismir2017`, or `full`
+- `DECHORD_ANIMATE_CHORDS=false` by default. Set to `true` only if you want optional chord-lane slide animation.
 
 ## How to Use
 

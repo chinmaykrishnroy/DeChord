@@ -17,9 +17,11 @@ class ChordRecognitionThread(QThread):
         try:
             engine = get_chord_engine(self.engine_name, self.chord_dict_name)
             self.engine_ready.emit(engine.name)
-            cache_file = cache_file_for_audio(self.audio_path, "cache/chord/", engine_id=engine.cache_id)
+            cache_engine_id = engine.preferred_cache_id()
+            cache_file = cache_file_for_audio(self.audio_path, "cache/chord/", engine_id=cache_engine_id)
             cached_chords = self._load_cache(cache_file)
             if cached_chords is not None:
+                self.engine_ready.emit(engine.engine_name_for_cache_id(cache_engine_id))
                 self.result.emit(cached_chords)
                 return
 
@@ -27,6 +29,8 @@ class ChordRecognitionThread(QThread):
             active_engine = getattr(engine, "last_engine_name", None)
             if active_engine:
                 self.engine_ready.emit(active_engine)
+            write_cache_engine_id = engine.active_cache_id()
+            cache_file = cache_file_for_audio(self.audio_path, "cache/chord/", engine_id=write_cache_engine_id)
             with open(cache_file, "w", encoding="utf-8") as f:
                 for chord in chords:
                     start_time, end_time, chord_label = chord

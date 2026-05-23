@@ -19,7 +19,6 @@ from PyQt5.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
     QMainWindow, QPushButton, QSizePolicy, QSlider, QFileDialog,
     QSpacerItem, QStackedWidget, QVBoxLayout, QWidget)
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
-from animated_widgets import AnimatedChordButton
 import res
 from theme import light_theme, dark_theme
 from winshadow import enable_window_shadow
@@ -252,7 +251,7 @@ class Ui_MainWindow(object):
 
         self.chordsWidgetHLayout.addWidget(self.prevChordBtn, 0, Qt.AlignVCenter)
 
-        self.currentChordBtn = AnimatedChordButton(self.chordsWidget)
+        self.currentChordBtn = QPushButton(self.chordsWidget)
         self.currentChordBtn.setObjectName(u"currentChordBtn")
         self.currentChordBtn.setMinimumSize(QSize(108, 108))
         self.currentChordBtn.setMaximumSize(QSize(108, 108))

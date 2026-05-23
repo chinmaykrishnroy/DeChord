@@ -4,7 +4,7 @@ import os
 import sys
 import traceback
 
-from PyQt5.QtCore import Qt, QTimer, QUrl
+from PyQt5.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, Qt, QTimer, QUrl
 from PyQt5.QtGui import QFontMetrics, QIcon
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMainWindow
@@ -46,6 +46,9 @@ class MainWindow(QMainWindow):
         self.analysis_notes = []
         self.analysis_threads = []
         self.current_chord_display_index = None
+        self.chord_transition_group = None
+        self.chord_lane_target_positions = None
+        self.chord_animation_enabled = self.env_flag("DECHORD_ANIMATE_CHORDS", default=False)
         self.chord_engine_name = os.environ.get("DECHORD_CHORD_ENGINE", "lv-chordia")
         self.chord_dict_name = os.environ.get("DECHORD_CHORD_DICT", "submission")
         self.setAcceptDrops(True)
@@ -123,6 +126,7 @@ class MainWindow(QMainWindow):
 
     def update_chords(self, position):
         current_time = position  # position is in milliseconds
+        previous_display_index = self.current_chord_display_index
         self.chord_index = chord_index_at_position(self.chords, current_time, self.chord_index)
 
         pre_previous_chord = previous_chord = current_chord = next_chord = post_next_chord = None
@@ -151,22 +155,28 @@ class MainWindow(QMainWindow):
             self.ui.chordSlider.setValue(0)
             self.current_chord_display_index = None
 
-        if hasattr(self.ui.currentChordBtn, "animate_progress"):
-            self.ui.currentChordBtn.animate_progress(current_chord_progress)
-        elif hasattr(self.ui.currentChordBtn, "set_progress"):
-            self.ui.currentChordBtn.set_progress(current_chord_progress)
-
-        if current_chord and self.current_chord_display_index != self.chord_index:
-            self.current_chord_display_index = self.chord_index
-            if hasattr(self.ui.currentChordBtn, "trigger_pulse"):
-                self.ui.currentChordBtn.trigger_pulse()
+        transition_direction = None
+        if current_chord and previous_display_index is not None:
+            index_delta = self.chord_index - previous_display_index
+            if index_delta in (-1, 1):
+                transition_direction = index_delta
 
         self.set_chord_button_text(self.ui.prePrevChordBtn, pre_previous_chord, 20)
         self.set_chord_button_text(self.ui.prevChordBtn, previous_chord, 30)
         self.set_chord_button_text(self.ui.currentChordBtn, current_chord, 40)
         self.set_chord_button_text(self.ui.nxtChordBtn, next_chord, 30)
         self.set_chord_button_text(self.ui.postNxtChordBtn, post_next_chord, 20)
+        if current_chord:
+            self.current_chord_display_index = self.chord_index
+            if self.chord_animation_enabled and transition_direction:
+                self.animate_chord_lane(transition_direction)
         self.update_chord_info(current_chord)
+
+    def env_flag(self, name, default=False):
+        value = os.environ.get(name)
+        if value is None:
+            return default
+        return value.strip().lower() in {"1", "true", "yes", "on"}
 
     def update_media(self, status):
         if status == QMediaPlayer.EndOfMedia:
@@ -205,6 +215,8 @@ class MainWindow(QMainWindow):
             self.timer.stop()
             self.player.stop()
             self.player.setMedia(QMediaContent())
+            if self.chord_transition_group is not None:
+                self.chord_transition_group.stop()
             self.ui.mediaProgressSlider.setValue(0)
             self.chord_index = 0
             self.current_chord_display_index = None
@@ -327,6 +339,46 @@ class MainWindow(QMainWindow):
         self.ui.seekPrevBtn.setEnabled(enabled)
         self.ui.seekNxtBtn.setEnabled(enabled)
         self.ui.saveChordsBtn.setEnabled(enabled)
+
+    def animate_chord_lane(self, direction):
+        buttons = [
+            self.ui.prePrevChordBtn,
+            self.ui.prevChordBtn,
+            self.ui.currentChordBtn,
+            self.ui.nxtChordBtn,
+            self.ui.postNxtChordBtn,
+        ]
+        if not all(button.isVisible() for button in buttons):
+            return
+
+        if self.chord_transition_group is not None:
+            self.chord_transition_group.stop()
+            if self.chord_lane_target_positions is not None:
+                for button, target in zip(buttons, self.chord_lane_target_positions):
+                    button.move(target)
+
+        targets = [button.pos() for button in buttons]
+        self.chord_lane_target_positions = targets
+
+        if direction > 0:
+            starts = [targets[1], targets[2], targets[3], targets[4], targets[4]]
+        else:
+            starts = [targets[0], targets[0], targets[1], targets[2], targets[3]]
+
+        group = QParallelAnimationGroup(self)
+        for button, start, target in zip(buttons, starts, targets):
+            button.move(start)
+            button.raise_()
+            animation = QPropertyAnimation(button, b"pos", group)
+            animation.setStartValue(start)
+            animation.setEndValue(target)
+            animation.setDuration(260)
+            animation.setEasingCurve(QEasingCurve.OutCubic)
+            group.addAnimation(animation)
+
+        group.finished.connect(lambda: [button.move(target) for button, target in zip(buttons, targets)])
+        self.chord_transition_group = group
+        group.start()
 
     def set_chord_button_text(self, button, chord_label, base_size):
         label = chord_label or ""

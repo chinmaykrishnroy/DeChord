@@ -22,6 +22,15 @@ class ChordEngine:
     def recognize(self, audio_path):
         raise NotImplementedError
 
+    def preferred_cache_id(self):
+        return self.cache_id
+
+    def active_cache_id(self):
+        return self.cache_id
+
+    def engine_name_for_cache_id(self, cache_id):
+        return self.name
+
 
 class MadmomChordEngine(ChordEngine):
     name = "madmom"
@@ -73,8 +82,27 @@ class PrimaryChordEngine(ChordEngine):
 
     def __init__(self, chord_dict_name=DEFAULT_LV_CHORDIA_DICT):
         self.chord_dict_name = chord_dict_name
-        self.cache_id = f"lv-chordia-primary-{chord_dict_name}-fallback-madmom-v1"
+        self.lv_cache_id = f"lv-chordia-{chord_dict_name}-v1"
+        self.madmom_cache_id = MadmomChordEngine.cache_id
+        self.cache_id = self.lv_cache_id
         self.last_engine_name = None
+
+    def preferred_cache_id(self):
+        if importlib.util.find_spec("lv_chordia") is not None:
+            return self.lv_cache_id
+        return self.madmom_cache_id
+
+    def active_cache_id(self):
+        if self.last_engine_name == "madmom":
+            return self.madmom_cache_id
+        if self.last_engine_name == "lv-chordia":
+            return self.lv_cache_id
+        return self.preferred_cache_id()
+
+    def engine_name_for_cache_id(self, cache_id):
+        if cache_id == self.madmom_cache_id:
+            return "madmom"
+        return "lv-chordia"
 
     def recognize(self, audio_path):
         if importlib.util.find_spec("lv_chordia") is not None:
