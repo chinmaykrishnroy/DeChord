@@ -47,7 +47,7 @@ class ChordEngineSelectionTest(unittest.TestCase):
             self.assertEqual(
                 engine.recognize("song.mp3"),
                 [
-                    (0.0, 1.0, "Cmaj7"),
+                    (0.0, 1.0, "CM7"),
                     (1.0, 2.0, "Asus4"),
                     (2.0, 3.0, "N"),
                 ],

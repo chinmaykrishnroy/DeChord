@@ -6,3 +6,8 @@ venv/
 .venv/
 *.log
 *.lnk
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/src-tauri/target/
+frontend/*.tsbuildinfo

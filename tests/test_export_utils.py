@@ -24,7 +24,7 @@ class ExportUtilsTest(unittest.TestCase):
                 {
                     "start": "0.0s",
                     "end": "1.5s",
-                    "label": "Cmaj7/E",
+                    "label": "CM7/E",
                     "quality": "Major seventh",
                     "notes": "C E G B",
                     "bass": "E",

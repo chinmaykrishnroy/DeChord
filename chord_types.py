@@ -120,7 +120,7 @@ class ChordLabel:
         if self.root is None:
             return self.source
         bass = f"/{self.bass}" if self.bass else ""
-        return f"{self.root}{self.suffix}{bass}"
+        return f"{self.root}{display_suffix(self.suffix)}{bass}"
 
     @property
     def simple_display(self) -> str:
@@ -179,6 +179,10 @@ def normalize_chord_label(label: Optional[str], display_mode: str = "advanced") 
     return chord.display
 
 
+def display_suffix(suffix: str) -> str:
+    return re.sub(r"(?i)maj", "M", suffix)
+
+
 def chord_details_text(label: Optional[str]) -> str:
     return parse_chord_label(label).details
 
@@ -233,6 +237,8 @@ def parse_chord_label(label: Optional[str]) -> ChordLabel:
 
 def _normalize_colon_quality(quality: str) -> str:
     normalized = quality.strip().replace(" ", "")
+    normalized = re.sub(r"^M(?=\d|$)", "maj", normalized)
+    normalized = re.sub(r"^mM(?=\d|$)", "mmaj", normalized)
     normalized = normalized.replace("major", "maj").replace("minor", "min")
     normalized = normalized.replace("sus4(b7,9,13)", "13sus4")
     normalized = normalized.replace("sus4(b7,9)", "9sus4")
@@ -258,6 +264,8 @@ def _normalize_suffix(suffix: str) -> str:
     normalized = suffix.strip().replace(" ", "")
     if not normalized:
         return ""
+    normalized = re.sub(r"^M(?=\d|$)", "maj", normalized)
+    normalized = re.sub(r"^mM(?=\d|$)", "mmaj", normalized)
     return SUFFIX_ALIASES.get(normalized.lower(), normalized)
 
 

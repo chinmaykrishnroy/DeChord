@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QThread, pyqtSignal
 from analysis_cache import cache_file_for_audio
 from chord_engines import DEFAULT_CHORD_ENGINE, DEFAULT_LV_CHORDIA_DICT, get_chord_engine
+from chord_types import normalize_chord_label
 
 class ChordRecognitionThread(QThread):
     result = pyqtSignal(list)
@@ -49,7 +50,7 @@ class ChordRecognitionThread(QThread):
                     if not line.strip():
                         continue
                     start, end, label = line.rstrip("\n").split(",", 2)
-                    cached_chords.append((float(start), float(end), label))
+                    cached_chords.append((float(start), float(end), normalize_chord_label(label)))
             return cached_chords
         except FileNotFoundError:
             return None

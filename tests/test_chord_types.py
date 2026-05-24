@@ -9,7 +9,7 @@ class ChordTypesTest(unittest.TestCase):
         self.assertEqual(normalize_chord_label("D:min"), "Dm")
 
     def test_preserves_extended_chord_types(self):
-        self.assertEqual(normalize_chord_label("F#:maj7/A#"), "F#maj7/A#")
+        self.assertEqual(normalize_chord_label("F#:maj7/A#"), "F#M7/A#")
         self.assertEqual(normalize_chord_label("Bb:min7"), "Bbm7")
         self.assertEqual(normalize_chord_label("G:hdim7"), "Gm7b5")
         self.assertEqual(normalize_chord_label("C13b9"), "C13b9")
@@ -47,7 +47,7 @@ class ChordTypesTest(unittest.TestCase):
         )
 
     def test_transpose_preserves_quality_and_slash_bass(self):
-        self.assertEqual(transpose_chord_label("Cmaj7/E", 2), "Dmaj7/F#")
+        self.assertEqual(transpose_chord_label("Cmaj7/E", 2), "DM7/F#")
         self.assertEqual(transpose_chord_label("Bbm7", 2), "Cm7")
 
 

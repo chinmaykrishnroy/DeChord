@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "DeChord Backend API",
+    "description": "Postman collection for testing the local DeChord audio analysis backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8765"
+    },
+    {
+      "key": "filePath",
+      "value": "C:\\Users\\apurv\\Downloads\\Die With A Smile.mp3"
+    },
+    {
+      "key": "songId",
+      "value": ""
+    },
+    {
+      "key": "jobId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Upload Song",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": []
+            }
+          ]
+        },
+        "url": "{{baseUrl}}/songs/upload"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.id) pm.collectionVariables.set('songId', data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Import Song By Path",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"path\": \"{{filePath}}\"\n}"
+        },
+        "url": "{{baseUrl}}/songs/import"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.id) pm.collectionVariables.set('songId', data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Preview Job",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"song_id\": \"{{songId}}\",\n  \"mode\": \"preview\",\n  \"preview_seconds\": 30,\n  \"force\": false\n}"
+        },
+        "url": "{{baseUrl}}/analysis/jobs"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.id) pm.collectionVariables.set('jobId', data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Full Song Job",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"song_id\": \"{{songId}}\",\n  \"mode\": \"full_song\",\n  \"force\": false\n}"
+        },
+        "url": "{{baseUrl}}/analysis/jobs"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.id) pm.collectionVariables.set('jobId', data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Batched Job",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"song_id\": \"{{songId}}\",\n  \"mode\": \"batched\",\n  \"batch_seconds\": 30,\n  \"force\": false\n}"
+        },
+        "url": "{{baseUrl}}/analysis/jobs"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.id) pm.collectionVariables.set('jobId', data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Job",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/analysis/jobs/{{jobId}}"
+      }
+    },
+    {
+      "name": "Get Job Batches",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/analysis/jobs/{{jobId}}/batches"
+      }
+    },
+    {
+      "name": "Get Job Timeline",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/analysis/jobs/{{jobId}}/timeline"
+      }
+    },
+    {
+      "name": "Get Song Timeline",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/songs/{{songId}}/timeline"
+      }
+    },
+    {
+      "name": "Save Corrections",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"corrections\": [\n    {\n      \"start\": 12,\n      \"end\": 16,\n      \"label\": \"G:7\"\n    }\n  ]\n}"
+        },
+        "url": "{{baseUrl}}/songs/{{songId}}/corrections"
+      }
+    },
+    {
+      "name": "Export Chords",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/songs/{{songId}}/exports/chords"
+      }
+    }
+  ]
+}
