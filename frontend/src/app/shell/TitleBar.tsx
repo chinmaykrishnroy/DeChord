@@ -1,4 +1,5 @@
 import { Minus, Square, X } from "lucide-react";
+import { AppLogo } from "./AppLogo";
 
 async function runWindowAction(action: "minimize" | "maximize" | "close") {
   try {
@@ -24,19 +25,12 @@ export function TitleBar() {
     <header className="titlebar" data-tauri-drag-region>
       <div className="titlebar__brand" data-tauri-drag-region>
         <div className="brand-mark" aria-hidden="true">
-          D
+          <AppLogo />
         </div>
         <div data-tauri-drag-region>
           <strong>DeChord</strong>
           <span>Practice workstation</span>
         </div>
-      </div>
-
-      <div className="titlebar__meter" data-tauri-drag-region>
-        <span />
-        <span />
-        <span />
-        <span />
       </div>
 
       <div className="window-controls">

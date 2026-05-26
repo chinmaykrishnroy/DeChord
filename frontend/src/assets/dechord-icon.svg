@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="913"
+     height="913"
+     viewBox="0 0 913 913"
+     role="img"
+     aria-label="Colored guitar chord chart icon">
+  <g stroke="#33485E"
+     transform="translate(76 0)"
+     stroke-width="20"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+    <rect x="140" y="100"
+          width="480"
+          height="650"
+          rx="22"
+          fill="#2CCFC4"/>
+    <rect x="140"
+          y="100"
+          width="480"
+          height="96"
+          fill="#F46B88"/>
+    <line x1="140" y1="196" x2="620" y2="196"/>
+    <line x1="140" y1="378" x2="620" y2="378"/>
+    <line x1="140" y1="560" x2="620" y2="560"/>
+    <line x1="237" y1="196" x2="237" y2="750"/>
+    <line x1="334" y1="196" x2="334" y2="750"/>
+    <line x1="431" y1="196" x2="431" y2="750"/>
+    <line x1="528" y1="196" x2="528" y2="750"/>
+    <circle cx="528" cy="286" r="28" fill="#C9A13A"/>
+    <circle cx="334" cy="468" r="28" fill="#C9A13A"/>
+    <circle cx="431" cy="468" r="28" fill="#C9A13A"/>
+  </g>
+</svg>

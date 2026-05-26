@@ -3,14 +3,14 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { WorkspaceView } from "../../features/workspace/WorkspaceView";
 import { useBackendWorkspace } from "../../features/workspace/useBackendWorkspace";
 import { useMockPlayback } from "../../features/playback/useMockPlayback";
-import type { ThemeSettings } from "../../types/music";
+import type { ThemeSettings, WorkspacePanel } from "../../types/music";
 import { transposeChordSegment } from "../../utils/musicTheory";
 import { SideRail } from "./SideRail";
 import { TitleBar } from "./TitleBar";
 
 function getInitialThemeSettings(): ThemeSettings {
   const params = new URLSearchParams(window.location.search);
-  const hue = Number(params.get("hue"));
+  const hue = params.has("hue") ? Number(params.get("hue")) : Number.NaN;
   const mode = params.get("theme");
 
   return {
@@ -28,6 +28,7 @@ export function AppShell() {
   const [transposeSemitones, setTransposeSemitones] = useState(0);
   const [tempoOffsetBpm, setTempoOffsetBpm] = useState(0);
   const [trackVolume, setTrackVolume] = useState(0.82);
+  const [activePanel, setActivePanel] = useState<WorkspacePanel>("studio");
   const backendWorkspace = useBackendWorkspace();
   const displayWorkspace = useMemo(
     () => ({
@@ -95,8 +96,13 @@ export function AppShell() {
     <div className={`app-frame theme-${themeSettings.mode}`} style={themeStyle}>
       <TitleBar />
       <div className="app-body">
-        <SideRail onOpenSettings={() => setSettingsOpen(true)} />
+        <SideRail
+          activePanel={activePanel}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onPanelChange={setActivePanel}
+        />
         <WorkspaceView
+          activePanel={activePanel}
           onCloseSettings={() => setSettingsOpen(false)}
           onOpenSettings={() => setSettingsOpen(true)}
           onThemeSettingsChange={setThemeSettings}
