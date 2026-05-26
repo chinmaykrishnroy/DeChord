@@ -2,6 +2,12 @@
 
 Welcome to DeChord! This application is designed for musicians, music enthusiasts, and anyone interested in analyzing the harmonic content of audio files. DeChord uses advanced music analysis algorithms to recognize the musical key and chords in an audio file and displays this information in real-time through an intuitive graphical user interface.
 
+## Project Layout
+
+- `frontend/` contains the modern Tauri + React desktop app.
+- `backend/` contains the local audio analysis API used by the modern app.
+- `legacy_desktop/` contains the original PyQt5 desktop app. The root `run.bat` and `run.sh` scripts now forward to this legacy app, while `run_app.bat` launches the modern desktop app with the backend.
+
 ## Images
 
 ![Screenshot (10)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/f2a399a5-7ba3-430a-bf9a-795f2abc88a8)
@@ -170,13 +176,13 @@ Runtime settings can be overridden with environment variables:
 
 ### Main Files and Directories
 
-- **main.py:** The entry point of the application.
-- **interface.py:** Contains the GUI layout and setup.
-- **chords.py:** Functions and classes related to chord recognition.
+- **legacy_desktop/main.py:** The entry point of the legacy PyQt5 application.
+- **legacy_desktop/interface.py:** Contains the legacy GUI layout and setup.
+- **legacy_desktop/chords.py:** Legacy Qt thread wrapper for chord recognition.
 - **chord_engines.py:** Engine selection and fallback logic for `lv-chordia` and `madmom`.
 - **advanced_chord_worker.py:** Isolated subprocess worker for the PyTorch-based `lv-chordia` engine.
-- **key.py:** Functions and classes related to key recognition.
-- **icons/:** Directory containing icon files.
+- **legacy_desktop/key.py:** Legacy Qt thread wrapper for key recognition.
+- **legacy_desktop/icon:** Legacy desktop icon.
 - **export/:** Directory where exported chord files are saved.
 
 ### Key Classes
@@ -194,7 +200,7 @@ Runtime settings can be overridden with environment variables:
 
 ### Adding New Features
 
-To add new features, you can extend the existing classes or add new ones. Ensure to update the GUI (`interface.py`) and connect the new functionalities appropriately.
+To add new features to the legacy desktop app, extend the existing classes under `legacy_desktop/`. Ensure UI changes update `legacy_desktop/interface.py` and connect the new functionality there.
 
 For the chord-recognition product plan, see [ROADMAP.md](ROADMAP.md).
 
