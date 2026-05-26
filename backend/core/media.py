@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 
 try:
-    from audio_runtime import ensure_ffmpeg_available
+    from legacy_desktop.audio_runtime import ensure_ffmpeg_available
 except Exception:  # pragma: no cover - only used when imported outside the full app.
     ensure_ffmpeg_available = None  # type: ignore[assignment]
 

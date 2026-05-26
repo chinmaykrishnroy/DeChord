@@ -1,8 +1,12 @@
 import json
 import sys
 
-from audio_runtime import ensure_ffmpeg_available
-from chord_types import normalize_chord_label
+try:
+    from .audio_runtime import ensure_ffmpeg_available
+    from .chord_types import normalize_chord_label
+except ImportError:
+    from audio_runtime import ensure_ffmpeg_available
+    from chord_types import normalize_chord_label
 
 
 def recognize(audio_path, chord_dict_name):

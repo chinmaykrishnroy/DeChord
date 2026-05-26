@@ -4,11 +4,10 @@ import json
 import uuid
 from pathlib import Path
 
-from chord_types import normalize_chord_label
-
 from backend.core.database import AnalysisDatabase
 from backend.core.time import utc_now_iso
 from backend.domain.models import AnalysisBatch, AnalysisJob, ChordSegment, Correction, Lyrics, Song
+from legacy_desktop.chord_types import normalize_chord_label
 
 
 class AnalysisRepository:

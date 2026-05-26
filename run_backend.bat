@@ -6,11 +6,17 @@ cd /d "%~dp0"
 set "HOST=127.0.0.1"
 set "PORT=8765"
 
-if exist "venv\Scripts\python.exe" (
-    set "PYTHON=venv\Scripts\python.exe"
-) else (
-    set "PYTHON=python"
+set "VENV_PY=%CD%\venv\Scripts\python.exe"
+if not exist "%VENV_PY%" (
+    echo [DeChord Backend] Creating shared virtual environment...
+    py -3 -m venv "%CD%\venv" 2>nul || python -m venv "%CD%\venv"
+    if errorlevel 1 (
+        echo [DeChord Backend] Failed to create shared virtual environment.
+        pause
+        exit /b 1
+    )
 )
+set "PYTHON=%VENV_PY%"
 
 echo [DeChord Backend] Using %PYTHON%
 echo [DeChord Backend] Installing backend dependencies...

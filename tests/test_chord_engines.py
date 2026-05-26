@@ -2,7 +2,7 @@ import types
 import unittest
 from unittest.mock import patch
 
-from chord_engines import ChordEngineUnavailable, LvChordiaChordEngine, get_chord_engine
+from legacy_desktop.chord_engines import ChordEngineUnavailable, LvChordiaChordEngine, get_chord_engine
 
 
 class ChordEngineSelectionTest(unittest.TestCase):
@@ -13,7 +13,7 @@ class ChordEngineSelectionTest(unittest.TestCase):
     def test_primary_falls_back_to_madmom_when_lv_chordia_is_missing(self):
         with patch("importlib.util.find_spec", return_value=None):
             engine = get_chord_engine("lv-chordia")
-            with patch("chord_engines.MadmomChordEngine.recognize", return_value=[(0.0, 1.0, "C")]):
+            with patch("legacy_desktop.chord_engines.MadmomChordEngine.recognize", return_value=[(0.0, 1.0, "C")]):
                 self.assertEqual(engine.recognize("song.mp3"), [(0.0, 1.0, "C")])
                 self.assertEqual(engine.last_engine_name, "madmom")
                 self.assertEqual(engine.active_cache_id(), "madmom-chords-v1")
@@ -56,7 +56,7 @@ class ChordEngineSelectionTest(unittest.TestCase):
     def test_primary_falls_back_to_madmom_when_lv_chordia_runtime_fails(self):
         with patch("importlib.util.find_spec", return_value=True), patch.object(
             LvChordiaChordEngine, "recognize", side_effect=RuntimeError("torch failed")
-        ), patch("chord_engines.MadmomChordEngine.recognize", return_value=[(0.0, 1.0, "C")]):
+        ), patch("legacy_desktop.chord_engines.MadmomChordEngine.recognize", return_value=[(0.0, 1.0, "C")]):
             engine = get_chord_engine("lv-chordia")
             self.assertEqual(engine.recognize("song.mp3"), [(0.0, 1.0, "C")])
             self.assertEqual(engine.last_engine_name, "madmom")

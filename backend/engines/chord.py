@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from chord_types import parse_chord_label
+from legacy_desktop.chord_types import parse_chord_label
 
 from backend.core.config import BackendConfig
 from backend.core.media import MediaTools
@@ -31,7 +31,7 @@ class LvChordiaEngine:
         self.engine_id = self.config.default_engine
 
     def recognize(self, audio_path: str, start: float = 0.0, duration: float | None = None) -> list[ChordSegment]:
-        from chord_engines import get_chord_engine
+        from legacy_desktop.chord_engines import get_chord_engine
 
         path_to_analyze = Path(audio_path)
         offset = 0.0

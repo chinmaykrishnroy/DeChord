@@ -1,6 +1,6 @@
 import unittest
 
-from export_utils import build_chord_export_rows
+from legacy_desktop.export_utils import build_chord_export_rows
 
 
 def fake_format_time(seconds):

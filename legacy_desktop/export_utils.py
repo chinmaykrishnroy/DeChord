@@ -1,4 +1,7 @@
-from chord_types import parse_chord_label
+try:
+    from .chord_types import parse_chord_label
+except ImportError:
+    from chord_types import parse_chord_label
 
 
 def build_chord_export_rows(chords, format_time):

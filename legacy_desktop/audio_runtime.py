@@ -3,7 +3,10 @@ import shutil
 import subprocess
 import tempfile
 
-from analysis_cache import audio_content_hash
+try:
+    from .analysis_cache import audio_content_hash
+except ImportError:
+    from analysis_cache import audio_content_hash
 
 
 def ensure_ffmpeg_available():

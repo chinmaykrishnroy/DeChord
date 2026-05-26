@@ -15,7 +15,7 @@ class MadmomTempoEngine:
 
     def estimate(self, audio_path: str) -> float | None:
         try:
-            from audio_runtime import ensure_ffmpeg_available
+            from legacy_desktop.audio_runtime import ensure_ffmpeg_available
             from madmom.features.beats import RNNBeatProcessor
             from madmom.features.tempo import TempoEstimationProcessor
         except Exception:

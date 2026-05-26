@@ -6,7 +6,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 - `frontend/` contains the modern Tauri + React desktop app.
 - `backend/` contains the local audio analysis API used by the modern app.
-- `legacy_desktop/` contains the original PyQt5 desktop app. The root `run.bat` and `run.sh` scripts now forward to this legacy app, while `run_app.bat` launches the modern desktop app with the backend.
+- `legacy_desktop/` contains the original PyQt5 desktop app and its chord/audio helper modules. The root `run.bat` and `run.sh` scripts launch this legacy app with the shared root `venv`, while `run_app.bat` launches the modern desktop app with the backend.
 
 ## Images
 
@@ -179,8 +179,10 @@ Runtime settings can be overridden with environment variables:
 - **legacy_desktop/main.py:** The entry point of the legacy PyQt5 application.
 - **legacy_desktop/interface.py:** Contains the legacy GUI layout and setup.
 - **legacy_desktop/chords.py:** Legacy Qt thread wrapper for chord recognition.
-- **chord_engines.py:** Engine selection and fallback logic for `lv-chordia` and `madmom`.
-- **advanced_chord_worker.py:** Isolated subprocess worker for the PyTorch-based `lv-chordia` engine.
+- **legacy_desktop/chord_engines.py:** Engine selection and fallback logic for `lv-chordia` and `madmom`.
+- **legacy_desktop/advanced_chord_worker.py:** Isolated subprocess worker for the PyTorch-based `lv-chordia` engine.
+- **legacy_desktop/chord_types.py:** Chord normalization, note spelling, transposition, and display helpers.
+- **legacy_desktop/audio_runtime.py:** Legacy FFmpeg setup and playback conversion helpers.
 - **legacy_desktop/key.py:** Legacy Qt thread wrapper for key recognition.
 - **legacy_desktop/icon:** Legacy desktop icon.
 - **export/:** Directory where exported chord files are saved.

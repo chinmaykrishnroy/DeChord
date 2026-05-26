@@ -4,7 +4,10 @@ import os
 import subprocess
 import sys
 
-from chord_types import normalize_chord_label
+try:
+    from .chord_types import normalize_chord_label
+except ImportError:
+    from chord_types import normalize_chord_label
 
 
 DEFAULT_CHORD_ENGINE = "lv-chordia"
@@ -127,7 +130,10 @@ class DirectLvChordiaChordEngine(ChordEngine):
         self.cache_id = f"lv-chordia-direct-{chord_dict_name}-v1"
 
     def recognize(self, audio_path):
-        from audio_runtime import ensure_ffmpeg_available
+        try:
+            from .audio_runtime import ensure_ffmpeg_available
+        except ImportError:
+            from audio_runtime import ensure_ffmpeg_available
         from lv_chordia.chord_recognition import chord_recognition
 
         ensure_ffmpeg_available()

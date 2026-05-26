@@ -16,7 +16,7 @@ class MadmomKeyEngine:
     def estimate(self, audio_path: str) -> str | None:
         try:
             import madmom
-            from audio_runtime import ensure_ffmpeg_available
+            from legacy_desktop.audio_runtime import ensure_ffmpeg_available
         except Exception:
             return None
         try:

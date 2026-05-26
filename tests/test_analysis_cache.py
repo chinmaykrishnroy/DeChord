@@ -2,8 +2,8 @@ import os
 import tempfile
 import unittest
 
-from analysis_cache import audio_content_hash, cache_file_for_audio
-from audio_runtime import playback_audio_path
+from legacy_desktop.analysis_cache import audio_content_hash, cache_file_for_audio
+from legacy_desktop.audio_runtime import playback_audio_path
 
 
 class AnalysisCacheTest(unittest.TestCase):

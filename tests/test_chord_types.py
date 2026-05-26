@@ -1,6 +1,6 @@
 import unittest
 
-from chord_types import chord_details_text, chord_notes, normalize_chord_label, parse_chord_label, transpose_chord_label
+from legacy_desktop.chord_types import chord_details_text, chord_notes, normalize_chord_label, parse_chord_label, transpose_chord_label
 
 
 class ChordTypesTest(unittest.TestCase):

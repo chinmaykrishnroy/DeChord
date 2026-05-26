@@ -8,10 +8,15 @@ set "HOST=127.0.0.1"
 set "PORT=8765"
 set "BACKEND_URL=http://%HOST%:%PORT%"
 
-if exist "venv\Scripts\python.exe" (
-  set "PYTHON_EXE=%PROJECT_DIR%venv\Scripts\python.exe"
-) else (
-  set "PYTHON_EXE=python"
+set "PYTHON_EXE=%PROJECT_DIR%venv\Scripts\python.exe"
+if not exist "%PYTHON_EXE%" (
+  echo [DeChord] Creating shared virtual environment...
+  py -3 -m venv "%PROJECT_DIR%venv" 2>nul || python -m venv "%PROJECT_DIR%venv"
+  if errorlevel 1 (
+    echo [DeChord] ERROR: shared virtual environment creation failed.
+    popd
+    exit /b 1
+  )
 )
 
 where /q npm

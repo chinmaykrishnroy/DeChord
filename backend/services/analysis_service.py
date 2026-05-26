@@ -8,7 +8,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import BinaryIO
 
-from analysis_cache import audio_content_hash
 from backend.core.config import BackendConfig
 from backend.core.database import AnalysisDatabase
 from backend.core.media import MediaTools
@@ -27,6 +26,7 @@ from backend.engines.chord import ChordEngine, LvChordiaEngine, build_chord_segm
 from backend.engines.key import KeyEngine, MadmomKeyEngine
 from backend.engines.tempo import MadmomTempoEngine, TempoEngine
 from backend.repositories.analysis_repository import AnalysisRepository
+from legacy_desktop.analysis_cache import audio_content_hash
 
 
 class AnalysisService:
