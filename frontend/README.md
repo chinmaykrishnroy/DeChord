@@ -77,12 +77,13 @@ src/
     guitar/            Fretboard UI and guitar/capo model
     piano/             Keyboard UI and piano note model
     playback/          Transport and local playback timing state
-    timeline/          Chord timeline UI
+    timeline/          Scroll-reading timeline, beat/bar markers, loop selection, song map
     workspace/         Main screen composition and backend workspace hook
   services/            Backend API client and response adapters
   styles/              Global CSS and theme tokens
   types/               Shared music/product contracts
   utils/               Chord and time helpers
+  assets/              SVG app icon and future visual assets
 ```
 
 ## Backend Wiring
@@ -95,6 +96,9 @@ The frontend talks to these backend routes:
 - `GET /analysis/jobs/{job_id}`
 - `GET /analysis/jobs/{job_id}/batches`
 - `GET /analysis/jobs/{job_id}/timeline`
+- `GET /songs/{song_id}/lyrics`
+- `POST /songs/{song_id}/lyrics`
+- `POST /songs/{song_id}/lyrics/download`
 
 The UI flow is:
 
@@ -116,7 +120,9 @@ The backend returns media analysis only. Guitar voicings, piano rendering, capo 
 - Compact windows hide lower-priority panels instead of compressing everything.
 - The current song, current instrument, and transport remain the core small-window surface.
 - Chord queue and timeline are helpful on desktop, but they can collapse or disappear on cramped windows.
-- Scrollbars are thin and subtle when vertical scrolling is unavoidable.
+- Sidebar panels avoid their own scrollbars where possible; long lyric text scrolls inside the lyric viewer only.
+- The timeline has a reserved row and must not overlap the guitar or piano surface.
+- Bar labels and section labels use separate visual lanes to avoid collisions.
 
 ## Instrument Views
 
@@ -149,6 +155,19 @@ The backend returns media analysis only. Guitar voicings, piano rendering, capo 
 
 ## Practice Controls
 
+- The practice timeline keeps the playback point anchored around 20% from the left, so the song scrolls past the player like a reading lane.
+- Playback position updates on a 50ms UI clock so the anchored timeline scrolls smoothly instead of stepping chord-by-chord.
+- Chord blocks keep enough width for full labels before falling back to truncation.
+- Beat markers and bar labels are rendered from the detected tempo when available.
+- Repeated progressions are detected from the chord sequence and surfaced above the lane.
+- Click a chord block to seek to that chord.
+- Drag across chord blocks to create a loop range; click the loop chip to clear it.
+- The compact song map is only for navigation context, not for reading chord names.
+- The left rail switches full work modes instead of only changing a small side widget:
+  - `Studio`: guitar/piano instrument workspace.
+  - `Lyrics`: large lyrics workspace.
+  - `Analysis`: job mode, progress, batches, export.
+  - `Practice`: loop/export/capo practice tools.
 - Tempo controls appear in the transport as `<` and `>` buttons.
 - Tempo controls remain disabled until the backend returns an engine tempo.
 - Tempo changes use the detected engine tempo as the base and adjust audio tempo through the Web Audio playback layer.
@@ -157,7 +176,18 @@ The backend returns media analysis only. Guitar voicings, piano rendering, capo 
 - The current chord card includes a remaining-time meter that starts full for each chord and drains into the next transition.
 - Major-extension labels use `M` instead of `maj`, for example `BbM7`.
 
+## Lyrics
+
+- Drop an `.lrc` or `.txt` file anywhere in the app to attach lyrics to the current song.
+- The lyrics panel can also import a local lyric file or ask the backend to search LRCLIB for the current song.
+- Imported/downloaded lyrics are saved through the backend lyrics routes and reused for the same song hash.
+- Synced LRC timestamps are parsed in the frontend; LRC metadata tags such as `[ar:]`, `[ti:]`, and `[al:]` are ignored.
+- The Lyrics workspace uses a Spotify-style large type view. Synced LRC lines auto-scroll with playback, manual scrolling pauses sync briefly, then the view returns to the active line.
+- Album art is extracted from embedded MP3 ID3 artwork when available and displayed in the Now Playing card. The Lyrics workspace samples that artwork to set its background, foreground, accent, and muted text colors.
+
 ## Theme
+
+The UI uses the DeChord icon in the title bar and Tauri bundle metadata. The SVG source is `src/assets/dechord-icon.svg`, and the desktop bundle uses `src-tauri/icons/icon.ico`.
 
 The UI supports dark/light mode, a live hue slider, and an instrument-sound toggle for sampled note/chord playback. The hue updates CSS variables in real time:
 

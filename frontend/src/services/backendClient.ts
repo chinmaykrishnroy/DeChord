@@ -77,6 +77,16 @@ export interface BackendTimeline {
   batches: BackendBatch[];
 }
 
+export interface BackendLyrics {
+  song_id: string;
+  lyrics_text: string;
+  synced: boolean;
+  source: string;
+  provider: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreateAnalysisOptions {
   mode: AnalysisMode;
   batchSeconds?: number;
@@ -156,6 +166,54 @@ export async function getAnalysisBatches(jobId: string): Promise<BackendBatch[]>
 
 export function getJobTimeline(jobId: string): Promise<BackendTimeline> {
   return requestJson(`/analysis/jobs/${jobId}/timeline`);
+}
+
+export async function getSongLyrics(songId: string): Promise<BackendLyrics | null> {
+  const payload = await requestJson<{ song_id: string; lyrics: BackendLyrics | null }>(
+    `/songs/${songId}/lyrics`,
+  );
+  return payload.lyrics;
+}
+
+export async function saveSongLyrics(
+  songId: string,
+  lyricsText: string,
+  synced: boolean,
+  source: "manual" | "internet" | "cache" = "manual",
+): Promise<BackendLyrics> {
+  const payload = await requestJson<{ song_id: string; lyrics: BackendLyrics }>(
+    `/songs/${songId}/lyrics`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        lyrics_text: lyricsText,
+        synced,
+        source,
+        provider: source === "internet" ? "lrclib" : null,
+      }),
+    },
+  );
+  return payload.lyrics;
+}
+
+export async function downloadSongLyrics(
+  songId: string,
+  title: string,
+  artist: string,
+  duration: number,
+): Promise<BackendLyrics> {
+  const payload = await requestJson<{ song_id: string; lyrics: BackendLyrics }>(
+    `/songs/${songId}/lyrics/download`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        artist,
+        duration,
+      }),
+    },
+  );
+  return payload.lyrics;
 }
 
 const toneRoles: ChordToneRole[] = ["root", "third", "fifth", "seventh", "extension"];

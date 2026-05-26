@@ -21,6 +21,8 @@ export type AnalysisMode = "full_song" | "preview" | "batched" | "practice";
 
 export type ChordToneRole = "root" | "third" | "fifth" | "seventh" | "extension";
 
+export type WorkspacePanel = "studio" | "lyrics" | "analysis" | "practice";
+
 export interface SongSummary {
   id: string;
   title: string;
@@ -57,6 +59,26 @@ export interface PlaybackState {
   isPlaying: boolean;
   currentTimeSeconds: number;
   durationSeconds: number;
+}
+
+export interface LoopRange {
+  startSeconds: number;
+  endSeconds: number;
+}
+
+export interface LyricsLine {
+  id: string;
+  timeSeconds: number | null;
+  text: string;
+}
+
+export interface LyricsState {
+  status: "empty" | "loading" | "ready" | "failed";
+  source: "manual" | "internet" | "cache" | "none";
+  synced: boolean;
+  text: string;
+  lines: LyricsLine[];
+  error: string | null;
 }
 
 export interface Voicing {

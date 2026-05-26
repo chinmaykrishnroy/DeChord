@@ -14,6 +14,9 @@ const silentChord: ChordSegment = {
   tones: [],
 };
 
+const playbackTickMs = 50;
+const playbackTickSeconds = playbackTickMs / 1000;
+
 interface PlaybackOptions {
   enabled?: boolean;
   availableUntilSeconds?: number;
@@ -83,6 +86,7 @@ export function useMockPlayback(
   const pitchSemitonesRef = useRef(pitchSemitones);
   const volumeRef = useRef(volume);
   const durationRef = useRef(durationSeconds);
+  const lastTickMsRef = useRef<number | null>(null);
   const [playback, setPlayback] = useState<PlaybackState>({
     isPlaying: false,
     currentTimeSeconds: 0,
@@ -134,6 +138,7 @@ export function useMockPlayback(
       }
 
       pendingPlayRef.current = false;
+      lastTickMsRef.current = performance.now();
       setPlayback((current) => ({
         ...current,
         durationSeconds: audioDuration,
@@ -226,12 +231,19 @@ export function useMockPlayback(
             return;
           }
 
-          setPlayback((current) => ({
-            ...current,
-            currentTimeSeconds: nextTime,
-            durationSeconds: audioDuration,
-            isPlaying: shifterConnectedRef.current,
-          }));
+          setPlayback((current) => {
+            const shouldResync = Math.abs(current.currentTimeSeconds - nextTime) > 0.75;
+            if (shouldResync) {
+              lastTickMsRef.current = performance.now();
+            }
+
+            return {
+              ...current,
+              currentTimeSeconds: shouldResync ? nextTime : current.currentTimeSeconds,
+              durationSeconds: audioDuration,
+              isPlaying: shifterConnectedRef.current,
+            };
+          });
         });
 
         shifterRef.current = shifter;
@@ -273,6 +285,7 @@ export function useMockPlayback(
   useEffect(() => {
     if (!enabled) {
       pendingPlayRef.current = false;
+      lastTickMsRef.current = null;
       disconnectSoundTouch(shifterRef.current, shifterConnectedRef);
     }
 
@@ -289,10 +302,15 @@ export function useMockPlayback(
       return undefined;
     }
 
-      const timer = window.setInterval(() => {
+    const timer = window.setInterval(() => {
       setPlayback((current) => {
-        const nextTime = current.currentTimeSeconds + 0.25 * playbackRate;
+        const now = performance.now();
+        const lastTickMs = lastTickMsRef.current ?? now;
+        lastTickMsRef.current = now;
+        const elapsedSeconds = Math.max(0, (now - lastTickMs) / 1000);
+        const nextTime = current.currentTimeSeconds + elapsedSeconds * playbackRateRef.current;
         if (nextTime >= hardStopSeconds) {
+          lastTickMsRef.current = null;
           return {
             ...current,
             isPlaying: false,
@@ -305,10 +323,58 @@ export function useMockPlayback(
           currentTimeSeconds: nextTime,
         };
       });
-    }, 250);
+    }, playbackTickMs);
 
     return () => window.clearInterval(timer);
   }, [audioSourceUrl, enabled, hardStopSeconds, playback.isPlaying, playbackRate]);
+
+  useEffect(() => {
+    if (!playback.isPlaying || !enabled || !audioSourceUrl) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      const shifter = shifterRef.current;
+      if (!shifter || !shifterConnectedRef.current) {
+        return;
+      }
+
+      const audioDuration = shifter.duration || durationRef.current;
+      const now = performance.now();
+      const lastTickMs = lastTickMsRef.current ?? now;
+      lastTickMsRef.current = now;
+      const elapsedSeconds = Math.max(0, (now - lastTickMs) / 1000);
+
+      setPlayback((current) => {
+        const nextTime = clamp(
+          current.currentTimeSeconds + elapsedSeconds * playbackRateRef.current,
+          0,
+          audioDuration,
+        );
+
+        if (nextTime >= hardStopSecondsRef.current - 0.05) {
+          lastTickMsRef.current = null;
+          seekSoundTouch(shifter, hardStopSecondsRef.current, audioDuration);
+          disconnectSoundTouch(shifter, shifterConnectedRef);
+          return {
+            ...current,
+            currentTimeSeconds: hardStopSecondsRef.current,
+            durationSeconds: audioDuration,
+            isPlaying: false,
+          };
+        }
+
+        return {
+          ...current,
+          currentTimeSeconds: nextTime,
+          durationSeconds: audioDuration,
+          isPlaying: true,
+        };
+      });
+    }, playbackTickMs);
+
+    return () => window.clearInterval(timer);
+  }, [audioSourceUrl, enabled, playback.isPlaying]);
 
   const currentChordIndex = useMemo(() => {
     if (chords.length === 0) {
@@ -337,6 +403,7 @@ export function useMockPlayback(
       return;
     }
 
+    lastTickMsRef.current = performance.now();
     setPlayback((current) => ({
       ...current,
       isPlaying: current.currentTimeSeconds >= current.durationSeconds ? true : !current.isPlaying,
@@ -349,6 +416,8 @@ export function useMockPlayback(
     if (!enabled) {
       return;
     }
+
+    lastTickMsRef.current = performance.now();
 
     if (shifterRef.current) {
       void startSoundTouchPlayback();
@@ -370,6 +439,7 @@ export function useMockPlayback(
 
   function pause() {
     pendingPlayRef.current = false;
+    lastTickMsRef.current = null;
     disconnectSoundTouch(shifterRef.current, shifterConnectedRef);
     setPlayback((current) => ({
       ...current,
@@ -379,6 +449,7 @@ export function useMockPlayback(
 
   function seek(nextTimeSeconds: number) {
     const playableTime = clampToPlayableTime(nextTimeSeconds);
+    lastTickMsRef.current = playback.isPlaying ? performance.now() : null;
     if (shifterRef.current) {
       seekSoundTouch(shifterRef.current, playableTime, playback.durationSeconds);
     }
@@ -391,6 +462,7 @@ export function useMockPlayback(
 
   function skipBy(deltaSeconds: number) {
     const nextTime = clampToPlayableTime(playback.currentTimeSeconds + deltaSeconds);
+    lastTickMsRef.current = playback.isPlaying ? performance.now() : null;
     if (shifterRef.current) {
       seekSoundTouch(shifterRef.current, nextTime, playback.durationSeconds);
     }

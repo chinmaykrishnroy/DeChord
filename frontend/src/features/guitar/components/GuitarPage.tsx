@@ -86,7 +86,7 @@ export function GuitarPage({
             Capo {capoSuggestion.capo}
             <span>
               {capoSuggestion.easyCount}/{capoSuggestion.totalCount} easy
-              {capoSuggestion.impossibleCount > 0 ? ` · ${capoSuggestion.impossibleCount} unsupported` : ""}
+              {capoSuggestion.impossibleCount > 0 ? ` - ${capoSuggestion.impossibleCount} unsupported` : ""}
             </span>
           </div>
         </div>

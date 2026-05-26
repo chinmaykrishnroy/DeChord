@@ -1,5 +1,5 @@
 import { useRef, type ChangeEvent } from "react";
-import { Gauge, KeyRound, Music2, RefreshCw, SlidersHorizontal, Upload } from "lucide-react";
+import { Metronome, Music2, Piano, RefreshCw, Upload } from "lucide-react";
 
 import type { AnalysisSummary, ChordSegment, SongSummary } from "../../types/music";
 import { getChordToneNotes } from "../../utils/chordNames";
@@ -11,7 +11,6 @@ interface NowPlayingHeaderProps {
   currentChord: ChordSegment;
   currentTimeSeconds: number;
   backendWorkspace: ReturnType<typeof useBackendWorkspace>;
-  onOpenSettings: () => void;
 }
 
 export function NowPlayingHeader({
@@ -20,7 +19,6 @@ export function NowPlayingHeader({
   currentChord,
   currentTimeSeconds,
   backendWorkspace,
-  onOpenSettings,
 }: NowPlayingHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isBusy =
@@ -52,13 +50,20 @@ export function NowPlayingHeader({
   return (
     <section className="now-playing" aria-label="Current song and chord">
       <div className="song-identity">
-        <div className="song-cover" aria-hidden="true">
-          <Music2 size={28} />
+        <div className={backendWorkspace.albumArtUrl ? "song-cover song-cover--art" : "song-cover"} aria-hidden="true">
+          {backendWorkspace.albumArtUrl ? (
+            <img src={backendWorkspace.albumArtUrl} alt="" />
+          ) : (
+            <Music2 size={24} />
+          )}
         </div>
         <div>
           <span>Now playing</span>
           <strong>{song.title}</strong>
-          <small>{song.artist} · {statusLabel}</small>
+          <small>{song.artist} - {statusLabel}</small>
+          <div className="song-progress" aria-hidden="true">
+            <i style={{ transform: `scaleX(${Math.max(0.02, backendWorkspace.progress)})` }} />
+          </div>
         </div>
         <input
           accept="audio/*"
@@ -73,7 +78,7 @@ export function NowPlayingHeader({
           onClick={() => fileInputRef.current?.click()}
           type="button"
         >
-          <Upload size={16} />
+          <Upload size={15} />
           {isBusy ? "Working" : "Import"}
         </button>
       </div>
@@ -89,11 +94,11 @@ export function NowPlayingHeader({
 
       <div className="session-stats" aria-label="Analysis snapshot">
         <div>
-          <KeyRound size={18} />
+          <Piano size={17} />
           <span>{analysis.key}</span>
         </div>
         <div>
-          <Gauge size={18} />
+          <Metronome size={17} />
           <span>{tempoLabel}</span>
         </div>
       </div>
@@ -105,15 +110,10 @@ export function NowPlayingHeader({
           onClick={backendWorkspace.refreshHealth}
           aria-label="Reconnect backend"
         >
-          <RefreshCw size={18} />
+          <RefreshCw size={17} />
           Reconnect
         </button>
-      ) : (
-      <button className="settings-button" type="button" onClick={onOpenSettings} aria-label="Open settings">
-        <SlidersHorizontal size={18} />
-        Theme
-      </button>
-      )}
+      ) : null}
     </section>
   );
 }
