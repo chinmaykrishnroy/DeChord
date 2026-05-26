@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import re
+from urllib.parse import urlencode
+from urllib.request import Request as UrlRequest, urlopen
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
@@ -33,6 +37,128 @@ class CorrectionRequest(BaseModel):
 
 class CorrectionsRequest(BaseModel):
     corrections: list[CorrectionRequest]
+
+
+class LyricsRequest(BaseModel):
+    lyrics_text: str
+    synced: bool = False
+    source: str = "manual"
+    provider: str | None = None
+
+
+class LyricsDownloadRequest(BaseModel):
+    title: str | None = None
+    artist: str | None = None
+    duration: float | None = None
+
+
+def _looks_synced_lyrics(text: str) -> bool:
+    return any(line.startswith("[") and ":" in line[:12] for line in text.splitlines())
+
+
+_LOCAL_ARTISTS = {"", "local file", "local demo", "unknown artist"}
+
+
+def _clean_lyric_lookup_text(value: str | None) -> str:
+    text = (value or "").strip()
+    text = re.sub(r"\.[A-Za-z0-9]{2,5}$", "", text)
+    text = text.replace("_", " ")
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(
+        r"\s*(?:\(|\[)\s*(?:official|lyrics?|lyric video|audio|video|hd|4k).*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return text.strip(" -_")
+
+
+def _split_artist_title(title: str, artist: str | None) -> tuple[str, str | None]:
+    clean_title = _clean_lyric_lookup_text(title)
+    clean_artist = _clean_lyric_lookup_text(artist)
+
+    if clean_artist.lower() in _LOCAL_ARTISTS:
+        clean_artist = ""
+
+    if not clean_artist:
+        parts = re.split(r"\s+[-–—]\s+", clean_title, maxsplit=1)
+        if len(parts) == 2 and all(parts):
+            clean_artist, clean_title = parts[0].strip(), parts[1].strip()
+
+    return clean_title, clean_artist or None
+
+
+def _lrclib_queries(title: str, artist: str | None, duration: float | None) -> list[dict[str, str]]:
+    clean_title, clean_artist = _split_artist_title(title, artist)
+    original_title = _clean_lyric_lookup_text(title)
+    rounded_duration = str(round(duration)) if duration else None
+    raw_queries: list[dict[str, str]] = []
+
+    if clean_title:
+        base = {"track_name": clean_title}
+        if clean_artist:
+            base["artist_name"] = clean_artist
+        raw_queries.append({**base, **({"duration": rounded_duration} if rounded_duration else {})})
+        raw_queries.append(base)
+
+    if original_title and original_title != clean_title:
+        raw_queries.append({"track_name": original_title})
+
+    seen: set[tuple[tuple[str, str], ...]] = set()
+    queries: list[dict[str, str]] = []
+    for query in raw_queries:
+        key = tuple(sorted(query.items()))
+        if query.get("track_name") and key not in seen:
+            seen.add(key)
+            queries.append(query)
+    return queries
+
+
+def _pick_lrclib_result(payload: Any, duration: float | None) -> dict[str, Any] | None:
+    if not isinstance(payload, list) or not payload:
+        return None
+
+    with_lyrics = [
+        item for item in payload
+        if isinstance(item, dict) and (item.get("syncedLyrics") or item.get("plainLyrics"))
+    ]
+    if not with_lyrics:
+        return None
+
+    if duration:
+        return min(
+            with_lyrics,
+            key=lambda item: abs(float(item.get("duration") or duration) - duration),
+        )
+
+    return with_lyrics[0]
+
+
+def _download_lrclib_lyrics(title: str, artist: str | None, duration: float | None) -> tuple[str, bool] | None:
+    last_error: Exception | None = None
+    for query in _lrclib_queries(title, artist, duration):
+        url = f"https://lrclib.net/api/search?{urlencode(query)}"
+        request = UrlRequest(url, headers={"User-Agent": "DeChord/0.1 local-desktop"})
+        try:
+            with urlopen(request, timeout=12) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            last_error = exc
+            continue
+
+        best = _pick_lrclib_result(payload, duration)
+        if best is None:
+            continue
+
+        synced = best.get("syncedLyrics")
+        plain = best.get("plainLyrics")
+        if synced:
+            return str(synced), True
+        if plain:
+            return str(plain), False
+    if last_error is not None:
+        raise last_error
+    return None
 
 
 def build_router(service: AnalysisService | None = None) -> APIRouter:
@@ -143,5 +269,62 @@ def build_router(service: AnalysisService | None = None) -> APIRouter:
             return {"song_id": song_id, "rows": analysis_service.export_chords(song_id)}
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.get("/songs/{song_id}/lyrics")
+    def get_lyrics(song_id: str) -> dict[str, Any]:
+        try:
+            lyrics = analysis_service.get_lyrics(song_id)
+            if lyrics is None:
+                return {"song_id": song_id, "lyrics": None}
+            return {"song_id": song_id, "lyrics": lyrics.to_dict()}
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @router.post("/songs/{song_id}/lyrics")
+    def save_lyrics(song_id: str, request: LyricsRequest) -> dict[str, Any]:
+        try:
+            lyrics = analysis_service.save_lyrics(
+                song_id,
+                request.lyrics_text,
+                synced=request.synced or _looks_synced_lyrics(request.lyrics_text),
+                source=request.source,
+                provider=request.provider,
+            )
+            return {"song_id": song_id, "lyrics": lyrics.to_dict()}
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @router.post("/songs/{song_id}/lyrics/download")
+    def download_lyrics(song_id: str, request: LyricsDownloadRequest) -> dict[str, Any]:
+        try:
+            song = analysis_service.repository.get_song(song_id)
+            if song is None:
+                raise KeyError(f"Song not found: {song_id}")
+            result = _download_lrclib_lyrics(
+                request.title or song.title,
+                request.artist,
+                request.duration or song.duration,
+            )
+            if result is None:
+                raise HTTPException(status_code=404, detail="No lyrics found.")
+            lyrics_text, synced = result
+            lyrics = analysis_service.save_lyrics(
+                song_id,
+                lyrics_text,
+                synced=synced,
+                source="internet",
+                provider="lrclib",
+            )
+            return {"song_id": song_id, "lyrics": lyrics.to_dict()}
+        except HTTPException:
+            raise
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Lyric download failed: {exc}") from exc
 
     return router

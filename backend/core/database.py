@@ -92,6 +92,17 @@ CREATE TABLE IF NOT EXISTS chord_corrections (
     PRIMARY KEY(song_id, correction_index),
     FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS song_lyrics (
+    song_id TEXT PRIMARY KEY,
+    lyrics_text TEXT NOT NULL,
+    synced INTEGER NOT NULL DEFAULT 0,
+    source TEXT NOT NULL,
+    provider TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(song_id) REFERENCES songs(id) ON DELETE CASCADE
+);
 """
 
 

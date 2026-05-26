@@ -8,7 +8,7 @@ from chord_types import normalize_chord_label
 
 from backend.core.database import AnalysisDatabase
 from backend.core.time import utc_now_iso
-from backend.domain.models import AnalysisBatch, AnalysisJob, ChordSegment, Correction, Song
+from backend.domain.models import AnalysisBatch, AnalysisJob, ChordSegment, Correction, Lyrics, Song
 
 
 class AnalysisRepository:
@@ -342,6 +342,38 @@ class AnalysisRepository:
                 for row in rows
             ]
 
+    def save_lyrics(
+        self,
+        song_id: str,
+        lyrics_text: str,
+        *,
+        synced: bool,
+        source: str,
+        provider: str | None = None,
+    ) -> Lyrics:
+        now = utc_now_iso()
+        with self.database.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO song_lyrics(song_id, lyrics_text, synced, source, provider, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(song_id) DO UPDATE SET
+                    lyrics_text = excluded.lyrics_text,
+                    synced = excluded.synced,
+                    source = excluded.source,
+                    provider = excluded.provider,
+                    updated_at = excluded.updated_at
+                """,
+                (song_id, lyrics_text, 1 if synced else 0, source, provider, now, now),
+            )
+            row = connection.execute("SELECT * FROM song_lyrics WHERE song_id = ?", (song_id,)).fetchone()
+            return self._lyrics_from_row(row)
+
+    def get_lyrics(self, song_id: str) -> Lyrics | None:
+        with self.database.connect() as connection:
+            row = connection.execute("SELECT * FROM song_lyrics WHERE song_id = ?", (song_id,)).fetchone()
+            return self._lyrics_from_row(row) if row else None
+
     def _song_from_row(self, row) -> Song:
         return Song(
             id=row["id"],
@@ -402,4 +434,15 @@ class AnalysisRepository:
             confidence=row["confidence"],
             corrected=bool(row["corrected"]),
             source=row["source"],
+        )
+
+    def _lyrics_from_row(self, row) -> Lyrics:
+        return Lyrics(
+            song_id=row["song_id"],
+            lyrics_text=row["lyrics_text"],
+            synced=bool(row["synced"]),
+            source=row["source"],
+            provider=row["provider"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
         )

@@ -141,6 +141,35 @@ Replaces saved chord corrections for a song.
 
 Returns chord export rows with start/end/chord/root/quality/notes/source fields. Frontend can convert this to CSV, JSON, ChordPro, PDF, or clipboard formats.
 
+### `GET /songs/{song_id}/lyrics`
+
+Returns cached lyrics for the song, or `null` when none are saved.
+
+### `POST /songs/{song_id}/lyrics`
+
+Saves manually imported lyrics for the song.
+
+```json
+{
+  "lyrics_text": "[00:12.00]First lyric line",
+  "synced": true,
+  "source": "manual",
+  "provider": null
+}
+```
+
+### `POST /songs/{song_id}/lyrics/download`
+
+Searches LRCLIB for the current song and saves the result in SQLite.
+
+```json
+{
+  "title": "Song title",
+  "artist": "Artist",
+  "duration": 213.5
+}
+```
+
 ## Caching
 
 The backend uses SQLite at:
@@ -149,7 +178,9 @@ The backend uses SQLite at:
 cache/backend/dechord_backend.sqlite3
 ```
 
-Song identity is based on audio content hash, not only file path. Replacing a file at the same path produces a different song hash, so stale analysis is avoided. SQLite stores songs, jobs, batches, chord segments, and user corrections.
+Song identity is based on audio content hash, not only file path. Replacing a file at the same path produces a different song hash, so stale analysis is avoided. SQLite stores songs, jobs, batches, chord segments, user corrections, and saved lyrics.
+
+Lyrics are cached by song id. The frontend can save manually imported `.lrc`/`.txt` lyrics or ask the backend to fetch lyrics from LRCLIB. Saved lyrics are reused for that song hash, so the app does not redownload them on every open. Lookup normalizes titles such as `Artist - Song Title`, removes common media suffixes, and retries without duration to avoid brittle "not found" responses from filename-style song titles.
 
 Browser-uploaded media is temporary. The backend deletes the copied upload file after analysis succeeds, or immediately when a matching cached analysis is reused. Cached chord/key/tempo/timeline data remains in SQLite, so playback and exports can use the database without recalculating unless `force: true` is requested.
 

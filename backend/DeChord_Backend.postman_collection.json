@@ -226,6 +226,47 @@
         "method": "GET",
         "url": "{{baseUrl}}/songs/{{songId}}/exports/chords"
       }
+    },
+    {
+      "name": "Get Lyrics",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/songs/{{songId}}/lyrics"
+      }
+    },
+    {
+      "name": "Save Lyrics",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lyrics_text\": \"[00:12.00]First lyric line\\n[00:18.00]Second lyric line\",\n  \"synced\": true,\n  \"source\": \"manual\",\n  \"provider\": null\n}"
+        },
+        "url": "{{baseUrl}}/songs/{{songId}}/lyrics"
+      }
+    },
+    {
+      "name": "Download Lyrics",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Song title\",\n  \"artist\": \"Artist\",\n  \"duration\": 213.5\n}"
+        },
+        "url": "{{baseUrl}}/songs/{{songId}}/lyrics/download"
+      }
     }
   ]
 }

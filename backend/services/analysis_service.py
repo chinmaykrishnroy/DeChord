@@ -19,6 +19,7 @@ from backend.domain.models import (
     AnalysisJob,
     ChordSegment,
     Correction,
+    Lyrics,
     Song,
     Timeline,
 )
@@ -200,6 +201,33 @@ class AnalysisService:
             }
             for segment in timeline.segments
         ]
+
+    def get_lyrics(self, song_id: str) -> Lyrics | None:
+        self._require_song(song_id)
+        lyrics = self.repository.get_lyrics(song_id)
+        if lyrics is None or not self._has_usable_lyrics_text(lyrics.lyrics_text):
+            return None
+        return lyrics
+
+    def save_lyrics(
+        self,
+        song_id: str,
+        lyrics_text: str,
+        *,
+        synced: bool,
+        source: str,
+        provider: str | None = None,
+    ) -> Lyrics:
+        self._require_song(song_id)
+        if not self._has_usable_lyrics_text(lyrics_text):
+            raise ValueError("Lyrics text cannot be empty or placeholder text.")
+        return self.repository.save_lyrics(
+            song_id,
+            lyrics_text,
+            synced=synced,
+            source=source,
+            provider=provider,
+        )
 
     def _run_job(self, song: Song, job: AnalysisJob) -> AnalysisJob:
         try:
@@ -407,6 +435,16 @@ class AnalysisService:
         clean_stem = re.sub(r"[^A-Za-z0-9._-]+", "-", stem).strip(".-") or "audio"
         clean_suffix = re.sub(r"[^A-Za-z0-9.]+", "", suffix)[:16] or ".audio"
         return f"{clean_stem[:80]}{clean_suffix}"
+
+    def _has_usable_lyrics_text(self, lyrics_text: str) -> bool:
+        body = re.sub(r"\[[^\]]+]", " ", lyrics_text)
+        body = re.sub(r"\s+", " ", body).strip()
+        if not body:
+            return False
+        return not re.fullmatch(
+            r"(?i)(?:not\s*found|no\s+lyrics?\s+found|lyrics?\s+unavailable|unavailable)",
+            body,
+        )
 
     def _cleanup_uploaded_media(self, song: Song) -> None:
         audio_path = Path(song.path)

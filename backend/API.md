@@ -463,6 +463,125 @@ Frontend use:
 - Convert `rows` to CSV, ChordPro, JSON, PDF, or clipboard output.
 - Export rows include corrections because they are built from the corrected timeline.
 
+## `GET /songs/{song_id}/lyrics`
+
+Returns saved lyrics for a song.
+
+Path params:
+
+- `song_id`: song ID.
+
+Success response with no saved lyrics:
+
+```json
+{
+  "song_id": "54bf83df33601875",
+  "lyrics": null
+}
+```
+
+Success response with saved lyrics:
+
+```json
+{
+  "song_id": "54bf83df33601875",
+  "lyrics": {
+    "song_id": "54bf83df33601875",
+    "lyrics_text": "[00:12.00]First lyric line",
+    "synced": true,
+    "source": "manual",
+    "provider": null,
+    "created_at": "2026-05-26T04:30:00.000000",
+    "updated_at": "2026-05-26T04:30:00.000000"
+  }
+}
+```
+
+Errors:
+
+- `404`: song not found.
+
+## `POST /songs/{song_id}/lyrics`
+
+Saves lyrics for a song. The backend auto-detects LRC-style synced lyrics when `synced` is false but the text contains timestamp tags.
+
+Path params:
+
+- `song_id`: song ID.
+
+Request body:
+
+```json
+{
+  "lyrics_text": "[00:12.00]First lyric line",
+  "synced": true,
+  "source": "manual",
+  "provider": null
+}
+```
+
+Success response:
+
+```json
+{
+  "song_id": "54bf83df33601875",
+  "lyrics": {
+    "song_id": "54bf83df33601875",
+    "lyrics_text": "[00:12.00]First lyric line",
+    "synced": true,
+    "source": "manual",
+    "provider": null,
+    "created_at": "2026-05-26T04:30:00.000000",
+    "updated_at": "2026-05-26T04:30:00.000000"
+  }
+}
+```
+
+Errors:
+
+- `400`: empty lyrics or invalid payload.
+- `404`: song not found.
+
+## `POST /songs/{song_id}/lyrics/download`
+
+Searches LRCLIB for lyrics, saves the result, and returns the cached record.
+
+Path params:
+
+- `song_id`: song ID.
+
+Request body:
+
+```json
+{
+  "title": "Song title",
+  "artist": "Artist",
+  "duration": 213.5
+}
+```
+
+Success response:
+
+```json
+{
+  "song_id": "54bf83df33601875",
+  "lyrics": {
+    "song_id": "54bf83df33601875",
+    "lyrics_text": "[00:12.00]First lyric line",
+    "synced": true,
+    "source": "internet",
+    "provider": "lrclib",
+    "created_at": "2026-05-26T04:30:00.000000",
+    "updated_at": "2026-05-26T04:30:00.000000"
+  }
+}
+```
+
+Errors:
+
+- `404`: song not found or no lyrics found.
+- `502`: remote lyrics lookup failed.
+
 ## Test Flow
 
 1. `GET /health`
@@ -473,3 +592,4 @@ Frontend use:
 6. Fetch `GET /analysis/jobs/{job_id}/timeline` when completed.
 7. Optional: `POST /songs/{song_id}/corrections`.
 8. Optional: `GET /songs/{song_id}/exports/chords`.
+9. Optional: import/download lyrics with the lyrics routes.
