@@ -1,3 +1,5 @@
+
+
 # DeChord - Real-Time Music Key and Chord Recognition Tool
 
 Welcome to DeChord! This application is designed for musicians, music enthusiasts, and anyone interested in analyzing the harmonic content of audio files. DeChord uses advanced music analysis algorithms to recognize the musical key and chords in an audio file and displays this information in real-time through an intuitive graphical user interface.
@@ -116,7 +118,7 @@ Welcome to DeChord! This application is designed for musicians, music enthusiast
 
 Runtime settings can be overridden with environment variables:
 
-- `DECHORD_CHORD_ENGINE=lv-chordia`, `madmom`, or `auto`
+- `DECHORD_CHORD_ENGINE=lv-chordia`, `madmom`, `auto`, or `lv-chordia-direct`
 - `DECHORD_CHORD_DICT=submission`, `ismir2017`, or `full`
 - `DECHORD_ANIMATE_CHORDS=false` by default. Set to `true` only if you want optional chord-lane slide animation.
 
