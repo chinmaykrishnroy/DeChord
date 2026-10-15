@@ -62,7 +62,18 @@ class LvChordiaEngine:
                     self._session.load()
                 result = self._session.infer(path)
             else:
-                from lv_chordia.chord_recognition import chord_recognition
+                from lv_chordia.chord_recognition import MODEL_NAMES, chord_recognition
+                from lv_chordia.mir.common import CACHE_DATA_PATH
+
+                missing = [
+                    name
+                    for name in MODEL_NAMES
+                    if not (Path(CACHE_DATA_PATH) / f"{name}.sdict").is_file()
+                ]
+                if missing:
+                    raise RuntimeError(
+                        "The lv-chordia model checkpoints are missing. Reinstall the analysis engine before retrying."
+                    )
 
                 result = chord_recognition(
                     path, chord_dict_name=self.config.default_dictionary

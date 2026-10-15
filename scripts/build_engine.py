@@ -1,6 +1,8 @@
 """Build a relocatable engine folder, including CPU models and media tools."""
 
 from pathlib import Path
+import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -12,6 +14,25 @@ def main():
     import static_ffmpeg
 
     static_ffmpeg.add_paths(weak=True)
+    weights = Path(sys.prefix) / "share/lv-chordia/cache_data"
+    checkpoints = sorted(weights.glob("*.sdict"))
+    if len(checkpoints) != 5 or any(
+        path.stat().st_size < 1_000_000 for path in checkpoints
+    ):
+        raise RuntimeError(
+            "The five bundled lv-chordia checkpoints are missing or incomplete"
+        )
+    manifest_path = root / "build/model-files.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in checkpoints
+            }
+        ),
+        encoding="utf-8",
+    )
     binaries = []
     for name in ("ffmpeg", "ffprobe"):
         path = shutil.which(name)
@@ -53,6 +74,10 @@ def main():
         "llvmlite",
         "--collect-all",
         "soundfile",
+        "--add-data",
+        f"{weights}{os.pathsep}cache_data",
+        "--add-data",
+        f"{manifest_path}{os.pathsep}.",
         "--add-data",
         f"{root / 'backend/test_backend.html'}{os.pathsep}backend",
         *binaries,

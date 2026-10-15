@@ -68,6 +68,7 @@ impl Engine {
         };
         let mut command = Command::new(&binary);
         command
+            .current_dir(&data)
             .args(["--port", &port.to_string(), "--owned"])
             .env("DECHORD_DATA_DIR", &data)
             .env("DECHORD_ENGINE_TOKEN", &connection.token)

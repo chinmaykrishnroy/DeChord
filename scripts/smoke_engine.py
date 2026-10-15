@@ -64,7 +64,7 @@ def main():
                     try:
                         health = request("/health")
                         break
-                    except (URLError, TimeoutError):
+                    except (URLError, TimeoutError, ConnectionError):
                         if child.poll() is not None or time.monotonic() > deadline:
                             raise RuntimeError(
                                 (folder / "engine.log").read_text(errors="replace")

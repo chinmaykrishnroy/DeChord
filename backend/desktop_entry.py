@@ -18,6 +18,10 @@ def main():
     if not 0 < args.port < 65536:
         parser.error("port must be between 1 and 65535")
     resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
+    if getattr(sys, "frozen", False):
+        from backend.core.integrity import verify_models
+
+        verify_models(resource_root)
     if data_dir := os.environ.get("DECHORD_DATA_DIR"):
         os.environ.setdefault("NUMBA_CACHE_DIR", str(Path(data_dir) / "numba"))
     binary_dir = resource_root / "bin"

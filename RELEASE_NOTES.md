@@ -13,7 +13,7 @@ The new practice studio brings guitar, piano, synced lyrics and a continuous cho
 
 ## Desktop
 
-Windows x64 installer and Linux x86_64 AppImage/Debian packages include the frontend, private local API engine, CPU inference models and FFmpeg tools. Python and Node.js are not required on the user's machine. The desktop starts a version-matched engine on a private loopback port, authenticates its requests and stops the engine when the app exits. Audio, analysis and lyrics are kept in the user's application data directory.
+Windows x64 installer/portable ZIP and Linux x86_64 AppImage/Debian packages include the frontend, private local API engine, CPU inference models and FFmpeg tools. Linux desktop builds target Ubuntu 24.04 or a compatible newer environment. Python and Node.js are not required on the user's machine. The desktop starts a version-matched engine on a private loopback port, authenticates its requests and stops the engine when the app exits. Audio, analysis and lyrics are kept in the user's application data directory.
 
 The pipeline tests the frozen engine with actual inference and launches the desktop UI on Windows and Linux before publishing. SHA256SUMS.txt records the installer/package hashes. Binaries are unsigned; platform signing is not part of this release.
 

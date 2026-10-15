@@ -10,7 +10,7 @@ LABEL org.opencontainers.image.source="https://github.com/chinmaykrishnroy/DeCho
       org.opencontainers.image.version="1.0.0" \
       org.opencontainers.image.licenses="MIT"
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
-    DECHORD_DATA_DIR=/data NUMBA_CACHE_DIR=/data/numba OMP_NUM_THREADS=2
+    DECHORD_DATA_DIR=/data NUMBA_CACHE_DIR=/data/numba OMP_NUM_THREADS=2 PYTHONPATH=/app
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libsndfile1 libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 dechord && useradd --uid 10001 --gid dechord --create-home dechord \
@@ -22,6 +22,7 @@ RUN python -m pip install --no-cache-dir --index-url https://download.pytorch.or
 COPY backend/ ./backend/
 COPY legacy_desktop/ ./legacy_desktop/
 COPY --from=frontend /build/frontend/dist ./frontend/dist
+WORKDIR /data
 USER dechord
 VOLUME ["/data"]
 EXPOSE 8765
