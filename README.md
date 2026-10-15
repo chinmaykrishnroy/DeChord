@@ -56,6 +56,12 @@ Use **Customize** to add or hide guitar, piano, lyrics, timeline, chord-sheet, a
 
 The startup sample is clearly marked as a demo. It is a progression preview, not analysis of an imported recording.
 
+## Resume practice
+
+Reopening restores the last retained song, playback position, current A–B loop, tempo, transposition, volume, instrument page, guitar preferences and lyric offset. Playback stays paused. Selecting another library song restores that song's own settings. The workspace keeps its saved layouts for each screen size.
+
+Practice settings are saved locally in the browser or desktop profile once per second when changed, on song switches and when leaving the page. The most recent 50 songs are retained. Browser and desktop profiles save separately; this is not account synchronization or a backup. Clearing site data removes these settings but leaves backend audio, analysis and lyrics intact. A missing library song falls back to the browsing/demo workspace. Storage failures are shown in the app.
+
 ## Guitar voicings
 
 The engine validates each candidate against the chord's pitch classes, required slash bass, fret span, and four-finger limit. Open/compact mode uses independent fingers; barre mode uses a verified index-finger barre. It ranks easier and lower-position shapes first and offers alternative voicings. Capo is explicit: fret numbers are relative to it, while the diagram and note previews sound in the original chord's key.
@@ -74,7 +80,7 @@ Chord-sheet edits save to the backend; reset transpose to zero before editing so
 
 When enabled, importing/opening a song first checks stored lyrics and then searches LRCLIB. Search prefers synced lyrics and matches title, artist, and duration. Song metadata goes to LRCLIB; audio is not sent there. Automatic lookup can be disabled. An explicit search form lets you correct metadata.
 
-LRC/TXT import works locally. Timestamped lines follow playback, click to seek, support LRC offsets and a per-view timing adjustment, and scroll inside the lyrics panel. Plain lyrics remain readable when timed lyrics are unavailable. No provider guarantees coverage for every recording.
+LRC/TXT import works locally. Timestamped lines follow playback, click to seek, support LRC offsets and a saved per-song timing adjustment shared by the workspace and Lyrics page, and scroll inside the lyrics panel. Plain lyrics remain readable when timed lyrics are unavailable. No provider guarantees coverage for every recording.
 
 ## Architecture and checks
 

@@ -8,6 +8,7 @@ import {
 } from "../../../services/backendClient";
 import { Fretboard } from "./Fretboard";
 import { useInstrumentSampler } from "../../instruments/useInstrumentSampler";
+import { usePracticePreferences } from "../../workspace/usePracticeSession";
 export function GuitarWidget({
   chord,
   chords,
@@ -23,33 +24,18 @@ export function GuitarWidget({
   };
   onSeek?: (time: number) => void;
 }) {
-  const [mode, setMode] = useState<GuitarDisplayMode>(() =>
-      localStorage.getItem("dechord.guitarMode") === "barre" ? "barre" : "open",
-    ),
-    [capo, setCapo] = useState(() =>
-      Math.max(
-        0,
-        Math.min(12, Number(localStorage.getItem("dechord.capo")) || 0),
-      ),
-    ),
-    [autoCapo, setAutoCapo] = useState(
-      () => localStorage.getItem("dechord.autoCapo") !== "false",
-    ),
-    [plan, setPlan] = useState<GuitarPlan | null>(null),
+  const { guitar, setGuitar } = usePracticePreferences();
+  const { mode, capo, autoCapo, easyShapes } = guitar;
+  const setMode = (mode: GuitarDisplayMode) =>
+    setGuitar((g) => ({ ...g, mode }));
+  const setCapo = (capo: number) => setGuitar((g) => ({ ...g, capo }));
+  const setAutoCapo = (autoCapo: boolean) =>
+    setGuitar((g) => ({ ...g, autoCapo }));
+  const setEasyShapes = (change: (shapes: string[]) => string[]) =>
+    setGuitar((g) => ({ ...g, easyShapes: change(g.easyShapes) }));
+  const [plan, setPlan] = useState<GuitarPlan | null>(null),
     [planError, setPlanError] = useState(""),
     [planning, setPlanning] = useState(false),
-    [easyShapes, setEasyShapes] = useState<string[]>(() => {
-      try {
-        const saved = JSON.parse(
-          localStorage.getItem("dechord.easyShapes") ?? "null",
-        );
-        if (Array.isArray(saved))
-          return saved.filter((s) => typeof s === "string").slice(0, 64);
-      } catch {
-        /* Use familiar shapes on first launch. */
-      }
-      return ["C", "D", "E", "G", "A", "Am", "Em", "Dm", "A7", "D7", "E7"];
-    }),
     [alternative, setAlternative] = useState(0);
   const sampler = useInstrumentSampler(true);
   const requestedCapo = autoCapo ? null : capo;
@@ -76,14 +62,6 @@ export function GuitarWidget({
       });
     return () => controller.abort();
   }, [chords, easyShapes, mode, requestedCapo]);
-  useEffect(() => {
-    localStorage.setItem("dechord.easyShapes", JSON.stringify(easyShapes));
-  }, [easyShapes]);
-  useEffect(() => {
-    localStorage.setItem("dechord.capo", String(capo));
-    localStorage.setItem("dechord.autoCapo", String(autoCapo));
-    localStorage.setItem("dechord.guitarMode", mode);
-  }, [capo, autoCapo, mode]);
   const shapes = useMemo(
     () => getGuitarVoicings(chord, mode, capo),
     [chord, mode, capo],

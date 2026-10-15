@@ -52,6 +52,7 @@ export function usePlayback(
   const audio = useRef<HTMLAudioElement | null>(null),
     graph = useRef<Graph | null>(null);
   const graphSetup = useRef<Promise<void> | null>(null),
+    pendingSeek = useRef<number | null>(null),
     generation = useRef(0),
     playIntent = useRef(false);
   const config = useRef({
@@ -79,8 +80,9 @@ export function usePlayback(
     const duration = Number.isFinite(el.duration)
       ? el.duration
       : config.current.durationSeconds;
+    const time = pendingSeek.current ?? el.currentTime;
     const position = playbackPosition(
-      el.currentTime,
+      time,
       duration,
       config.current.loop,
     );
@@ -88,7 +90,7 @@ export function usePlayback(
     setPlayback({
       isPlaying: !el.paused && !el.ended,
       currentTimeSeconds:
-        position.looped && playIntent.current ? position.time : el.currentTime,
+        position.looped && playIntent.current ? position.time : time,
       durationSeconds: duration,
     });
   }, []);
@@ -164,6 +166,7 @@ export function usePlayback(
   useEffect(() => {
     generation.current++;
     playIntent.current = false;
+    pendingSeek.current = null;
     setAudioError(null);
     setPlayback({ isPlaying: false, currentTimeSeconds: 0, durationSeconds });
     if (!audioSourceUrl) return;
@@ -177,6 +180,13 @@ export function usePlayback(
     el.playbackRate = playbackRate;
     el.src = audioSourceUrl;
     audio.current = el;
+    const onMetadata = () => {
+      if (pendingSeek.current !== null && Number.isFinite(el.duration)) {
+        el.currentTime = clamp(pendingSeek.current, 0, el.duration);
+        pendingSeek.current = null;
+      }
+      sync();
+    };
     const onEnd = () => {
       const loop = config.current.loop;
       if (loop && playIntent.current) {
@@ -192,7 +202,6 @@ export function usePlayback(
         "This audio could not be played. Check that the source file is available and uses a supported format.",
       );
     for (const event of [
-      "loadedmetadata",
       "durationchange",
       "play",
       "pause",
@@ -200,6 +209,7 @@ export function usePlayback(
       "timeupdate",
     ])
       el.addEventListener(event, sync);
+    el.addEventListener("loadedmetadata", onMetadata);
     el.addEventListener("ended", onEnd);
     el.addEventListener("error", onError);
     const ticker = window.setInterval(() => {
@@ -210,7 +220,6 @@ export function usePlayback(
       playIntent.current = false;
       window.clearInterval(ticker);
       for (const event of [
-        "loadedmetadata",
         "durationchange",
         "play",
         "pause",
@@ -218,6 +227,7 @@ export function usePlayback(
         "timeupdate",
       ])
         el.removeEventListener(event, sync);
+      el.removeEventListener("loadedmetadata", onMetadata);
       el.removeEventListener("ended", onEnd);
       el.removeEventListener("error", onError);
       el.pause();
@@ -319,9 +329,20 @@ export function usePlayback(
       end =
         el && Number.isFinite(el.duration)
           ? el.duration
-          : state.current.durationSeconds;
-    const next = clamp(time, 0, end);
-    if (el) el.currentTime = next;
+          : config.current.durationSeconds;
+    const next = clamp(
+      Number.isFinite(time) ? time : 0,
+      0,
+      end > 0 ? end : Infinity,
+    );
+    if (el) {
+      if (el.readyState < HTMLMediaElement.HAVE_METADATA)
+        pendingSeek.current = next;
+      else {
+        pendingSeek.current = null;
+        el.currentTime = next;
+      }
+    }
     setPlayback((s) => ({ ...s, currentTimeSeconds: next }));
   }, []);
   const skipBy = useCallback(

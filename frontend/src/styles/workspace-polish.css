@@ -100,6 +100,12 @@ body,
 .studio-sidebar {
   padding: 16px 10px 12px;
   border-radius: 7px;
+  overflow: hidden;
+}
+.studio-sidebar > .wordmark,
+.studio-sidebar > nav,
+.studio-sidebar > .sidebar-bottom {
+  flex-shrink: 0;
 }
 .wordmark {
   padding: 0 9px 18px;
@@ -120,17 +126,26 @@ body,
   gap: 10px;
 }
 .sidebar-library {
+  display: flex;
+  flex-direction: column;
   margin-top: 16px;
   padding-top: 10px;
   min-height: 0;
-  overflow: auto;
-  scrollbar-width: thin;
+  overflow: hidden;
 }
-.sidebar-library > div {
-  position: sticky;
-  top: 0;
-  background: #101211;
-  z-index: 1;
+.sidebar-library-heading {
+  flex: 0 0 auto;
+}
+.sidebar-song-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
+}
+.sidebar-song-list:focus-visible {
+  outline-offset: -2px;
 }
 .sidebar-bottom {
   padding-top: 12px;
@@ -142,6 +157,38 @@ body,
 .library-mini {
   padding: 7px 4px;
   gap: 8px;
+}
+@media (max-height: 680px) and (min-width: 761px) {
+  .studio-sidebar {
+    padding-block: 10px 8px;
+  }
+  .studio-sidebar .wordmark {
+    padding-bottom: 8px;
+  }
+  .studio-sidebar nav {
+    gap: 2px;
+  }
+  .studio-sidebar nav button {
+    padding: 6px 10px;
+    min-height: 32px;
+  }
+  .sidebar-library {
+    margin-top: 10px;
+    padding-top: 6px;
+  }
+  .sidebar-bottom {
+    padding-top: 7px;
+    gap: 5px;
+  }
+  .sidebar-bottom > button {
+    padding: 6px 10px;
+  }
+}
+@media (max-height: 600px) and (min-width: 761px) {
+  .studio-sidebar nav button {
+    padding-block: 3px;
+    min-height: 28px;
+  }
 }
 .library-mini strong {
   max-width: 115px;
@@ -600,6 +647,9 @@ body,
   }
 }
 @media (max-width: 760px) {
+  .sidebar-library {
+    display: none;
+  }
   .studio-body {
     grid-template-columns: 48px minmax(0, 1fr);
     gap: 5px;

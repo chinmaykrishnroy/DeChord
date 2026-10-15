@@ -4,6 +4,7 @@ import { useAlbumPalette } from "./useAlbumPalette";
 import { FileText, Search } from "lucide-react";
 import type { useBackendWorkspace } from "./useBackendWorkspace";
 import { formatTime } from "../../utils/time";
+import { usePracticePreferences } from "./usePracticeSession";
 export function LyricsWidget({
   backend,
   time,
@@ -15,10 +16,11 @@ export function LyricsWidget({
 }) {
   const [title, setTitle] = useState(""),
     [artist, setArtist] = useState(""),
-    [offset, setOffset] = useState(0),
     [follow, setFollow] = useState(true),
     [lyricHeight, setLyricHeight] = useState(0),
     [lyricWidth, setLyricWidth] = useState(0);
+  const { lyricOffset: offset, setLyricOffset: setOffset } =
+    usePracticePreferences();
   const input = useRef<HTMLInputElement>(null),
     activeLine = useRef<HTMLButtonElement>(null),
     linesViewport = useRef<HTMLDivElement>(null);
@@ -27,7 +29,6 @@ export function LyricsWidget({
   useEffect(() => {
     setTitle(backend.song?.title ?? "");
     setArtist("");
-    setOffset(0);
     setFollow(true);
     centered.current = false;
   }, [backend.song?.id]);

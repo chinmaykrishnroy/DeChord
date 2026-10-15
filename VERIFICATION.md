@@ -1,5 +1,19 @@
 # Studio rework verification
 
+## Sidebar scrolling regression — 16 October 2026
+
+- Reproduced the reported clipped-song strip at 1280x720 after scrolling: the header started 11px below the scroll container's top, and hit-testing above the header returned a song button. A live assertion failed with `REGRESSION: a song paints above the Your music header after scrolling`.
+- The header now sits outside a dedicated clipped song scroller. Brand/navigation/Settings do not shrink or join that scroll area. Compact-height navigation leaves room for the list rather than collapsing it.
+- Live geometry assertions passed at 1280x720, 1000x650, 1280x560 and 1280x533. The last size reserves space equivalent to the native title bar at minimum window height: 62px song viewport for 51px rows, no outer sidebar overflow. At 390x844 the icon rail hides the mini-library and the document has no horizontal overflow.
+- `frontend/tests/sidebar-probe.js` retains the painted-geometry regression for a live browser/DevTools run after scrolling; the ordinary Node suite cannot evaluate CSS clipping.
+
+## Practice recovery milestone — 16 October 2026
+
+- Frontend suite: 27 passing tests, including session round trips, per-song isolation, 50-song retention, duplicate identities, corrupt/versioned storage and duration-clamped positions/loops. TypeScript and production build passed. The preceding checkpoint passed all 53 backend tests and offline Windows Cargo check; this milestone changes frontend code only.
+- Browser actions set 85 BPM, -2 semitones, manual capo 3, lyric offset 1.25 seconds and position 69 seconds on a retained MP3. A timeline drag created a 1:10–1:14 loop. Reload restored those controls and the loop with audio paused, initially readyState 1 and subsequently 4. Switching to C-major started at zero with no loop/transpose; switching back restored the MP3's separate settings and readyState 4 without an alert.
+- An initial development reload briefly displayed a playback warning; a subsequent fresh reload and the explicit reload/switch checks above did not reproduce it. Browser checks do not establish audible quality or long-session/crash durability. Persistence is profile-local; clearing site data removes practice preferences.
+- The native development watcher also rebuilt the executable after the simplified icon asset update. Extracting its embedded Windows icon confirmed the bold pick/play mark at 32px.
+
 ## Instrument pages, motion, controls and new icon
 
 - Backend regression suite: 53 passing tests. Frontend regression suite: 23 passing tests. TypeScript and Vite production build passed.
@@ -12,7 +26,7 @@
 - Responsive checks at 760x560 and 390x844 found no horizontal document overflow; the practice dock and player met without overlap. Narrow layouts prioritize current and next chord previews.
 - One in-progress hot-reload session reported unsupported media. Fresh development and built-frontend sessions both played the same MP3 with readyState 4 and no reported playback error. Listening quality and the precise transient cause remain unverified.
 - The icon now uses a bold pick silhouette and one play cutout, replacing the detailed D mark after small-size review. Web SVG, favicon, Windows ICO, macOS ICNS and PNG sizes derive from the same vector using the existing Tauri icon command. The 32px and 128px generated assets were visually inspected.
-- The native development watcher previously rebuilt and relaunched the Windows executable with the D mark; the replacement assets are included for the next native build. Quarter zoom selection returned 0.25 with option background rgb(33,42,36) and text rgb(238,247,240).
+- Quarter zoom selection returned 0.25 with option background rgb(33,42,36) and text rgb(238,247,240).
 - Product recommendations and remaining release gates are in PRODUCT_ASSESSMENT.md. Tests and muted playback do not establish recognition accuracy, audible quality or clean-machine installer readiness.
 
 ## Sidebar artwork and lyric text follow-up

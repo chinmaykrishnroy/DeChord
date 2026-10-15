@@ -44,6 +44,12 @@ The practice timeline owns a compact shell row immediately above the player, wit
 
 Tempo and transpose fields commit typed values on Enter/blur, support cancellation with Escape, and reset to the source tempo/zero semitones on double-click. Displayed tempo bounds match the actual supported playback-rate bounds. The audio element is document-owned and hidden, with explicit cleanup. Development API and media routes share the frontend origin through Vite's proxy.
 
+## Practice recovery
+
+`practiceSession.ts` defines the versioned, bounded per-song storage contract and validates every restored number, loop, page and guitar preference. `usePracticeSession` owns settings and position references. Widgets share guitar preferences and lyric offset through one provider, so changing pages cannot reset them. Position samples do not trigger extra renders. Changed sessions are persisted at most once per second, on song activation, page hide and visibility changes; unchanged sessions do not write. A fresh storage read merges other tabs' song entries before writing. Concurrent edits of the same song use the last writer; this is local preference storage, not synchronized collaboration.
+
+Startup waits for the library before opening the last retained song, and yields to an import or selection already made by the user. Restoration never stores or restores play intent. The player queues seeks until media metadata is available and clamps against the new source duration. Each song saves its current loop, tempo offset, pitch, volume, page, capo mode, easy-shape list and lyric offset. The 50 most recently saved songs are retained. Workspace layout remains a separate profile-wide preference with breakpoint-specific placements. Browser and desktop origins/profiles have independent storage; the backend remains the owner of audio and analysis. Named loop collections and portable session backup remain future work.
+
 ## Capo planning and native drops
 
 `POST /guitar/plan` accepts unique exact chord labels with their accumulated durations, preferred easy shapes, open/barre mode, and an optional manual capo. The backend validates pitch coverage, slash bass, fret span, physical fret limit, and finger count before scoring each position. Candidate costs are cached, while preferences and duration weights are applied per request. Manual capo is never overridden. The frontend keeps user preferences in local storage and cancels stale requests; it no longer searches capo positions on the UI thread.

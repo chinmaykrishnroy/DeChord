@@ -22,7 +22,7 @@ The current checks establish API orchestration and fingering constraints. They d
 
 ## 3. Complete the practice loop
 
-Prioritize saved practice sessions: last song and position, named A–B loops, capo and voicing choices, lyric offset, instrument and layout. Reopen into the previous session without starting audio automatically.
+Saved practice recovery now covers the last song and position, the current A–B loop, tempo/transposition/volume, capo and easy-shape preferences, lyric offset and instrument page. Workspace layout persists separately. Reopening stays paused. These settings belong to the local browser/desktop profile. Named loop collections, per-chord voicing choices and portable backup remain unfinished.
 
 Then add a count-in, beat/bar guides and repeatable sections. A gradual tempo ramp after successful repetitions would be more useful than many additional widgets. Previous/current/next diagrams are a good beginner aid; retain one emphasized current chord and a consistent capo across the sequence. At narrow sizes, prioritize the current and upcoming chords.
 

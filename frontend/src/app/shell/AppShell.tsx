@@ -35,22 +35,28 @@ import { formatTime } from "../../utils/time";
 import { isTauri, invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { importSongPath } from "../../services/backendClient";
+import {
+  PracticePreferences,
+  usePracticeSession,
+} from "../../features/workspace/usePracticeSession";
+import type { PracticePage } from "../../features/workspace/practiceSession";
 
-type Page =
-  "workspace" | "library" | "lyrics" | "settings" | "guitar" | "piano";
 export function AppShell() {
   const backend = useBackendWorkspace();
-  const [page, setPage] = useState<Page>("workspace"),
-    [customizing, setCustomizing] = useState(false),
-    [transpose, setTranspose] = useState(0),
-    [tempo, setTempo] = useState(0),
-    [volume, setVolume] = useState(0.8),
-    [loop, setLoop] = useState<LoopRange | null>(null),
+  const session = usePracticeSession();
+  const { page, transpose, tempo, volume, loop } = session.settings;
+  const setPage = (page: PracticePage) => session.update({ page });
+  const setTranspose = (transpose: number) => session.update({ transpose });
+  const setTempo = (tempo: number) => session.update({ tempo });
+  const setVolume = (volume: number) => session.update({ volume });
+  const setLoop = (loop: LoopRange | null) => session.update({ loop });
+  const [customizing, setCustomizing] = useState(false),
     [search, setSearch] = useState(""),
     [importError, setImportError] = useState(""),
     [dragging, setDragging] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null),
-    lastSong = useRef<string | null>(null),
+    startupRestored = useRef(false),
+    justRestored = useRef(false),
     loopRef = useRef(loop);
   loopRef.current = loop;
   const workspace = useMemo(
@@ -83,20 +89,61 @@ export function AppShell() {
   const sampler = useInstrumentSampler(true);
   const identity = backend.audioSourceUrl ?? "demo";
   useEffect(() => {
-    if (lastSong.current !== identity) {
-      lastSong.current = identity;
-      setLoop(null);
-      setTranspose(0);
-      setTempo(0);
-      player.pause();
-      player.seek(0);
+    const position = session.activate(
+      backend.song?.id ?? null,
+      backend.workspace.song.durationSeconds,
+    );
+    justRestored.current = true;
+    player.pause();
+    player.seek(position);
+  }, [identity, backend.song?.id, session.activate, player.pause, player.seek]);
+  useEffect(() => {
+    if (justRestored.current) {
+      justRestored.current = false;
+      return;
     }
-  }, [identity]);
+    session.recordPosition(
+      backend.song?.id ?? null,
+      player.playback.currentTimeSeconds,
+    );
+  }, [
+    identity,
+    backend.song?.id,
+    player.playback.currentTimeSeconds,
+    session.recordPosition,
+  ]);
+  useEffect(() => {
+    if (startupRestored.current || backend.connectionStatus !== "online")
+      return;
+    // A user import or song choice takes priority over delayed startup recovery.
+    if (
+      backend.song ||
+      backend.audioSourceUrl ||
+      backend.workStatus !== "idle"
+    ) {
+      startupRestored.current = true;
+      return;
+    }
+    // Health and library arrive separately; wait for the capability/library response.
+    if (!backend.capabilities) return;
+    startupRestored.current = true;
+    const song = backend.library.find((s) => s.id === session.lastSongId);
+    if (song) void backend.openSong(song);
+  }, [
+    backend.connectionStatus,
+    backend.capabilities,
+    backend.library,
+    backend.song,
+    backend.audioSourceUrl,
+    backend.workStatus,
+    backend.openSong,
+    session.lastSongId,
+  ]);
   useEffect(() => {
     function key(e: KeyboardEvent) {
       if (
         (e.target as HTMLElement).closest(
-          "input,textarea,select,button,[contenteditable]",
+          "input,textarea,select,button,[contenteditable],[data-scroll-area]",
         )
       )
         return;
@@ -307,418 +354,446 @@ export function AppShell() {
     s.title.toLowerCase().includes(search.toLowerCase()),
   );
   return (
-    <div
-      className={`studio-app ${dragging ? "file-over" : ""}`}
-      onDragOver={(e) => {
-        if (e.dataTransfer.types.includes("Files")) {
-          e.preventDefault();
-          setDragging(true);
-        }
-      }}
-      onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node))
-          setDragging(false);
-      }}
-      onDrop={drop}
-    >
-      <a href="#main-content" className="skip-link">
-        Skip to workspace
-      </a>
-      <TitleBar />
-      <div className="studio-body">
-        <aside className="studio-sidebar">
-          <a
-            className="wordmark"
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              setPage("workspace");
-            }}
-          >
-            <span className="sidebar-brand-icon">
-              <AppLogo />
-            </span>
-            <strong>
-              DeChord<span>studio</span>
-            </strong>
-          </a>
-          <nav aria-label="Main navigation">
-            {nav.map(({ id, icon: Icon, label }) => (
-              <button
-                key={id}
-                className={page === id ? "is-active" : ""}
-                onClick={() => setPage(id)}
-              >
-                <Icon size={20} />
-                <span>{label}</span>
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-library">
-            <div>
-              <span>Your music</span>
-              <button
-                className="icon-button"
-                aria-label="Import song"
-                onClick={() => fileInput.current?.click()}
-              >
-                <Upload size={15} />
-              </button>
-            </div>
-            {backend.library.slice(0, 6).map((s) => (
-              <button
-                key={s.id}
-                className={
-                  s.id === backend.song?.id
-                    ? "library-mini is-active"
-                    : "library-mini"
-                }
-                onClick={() => {
-                  void backend.openSong(s);
-                  setPage("workspace");
-                }}
-              >
-                <SongCover songId={s.id} />
-                <span>
-                  <strong>{s.title}</strong>
-                  <small>Local audio</small>
-                </span>
-              </button>
-            ))}
-            {!backend.library.length && (
-              <p>Keep the songs you're learning close at hand.</p>
-            )}
-          </div>
-          <div className="sidebar-bottom">
-            <div className="local-badge">
-              <span
-                className={`status-dot ${backend.connectionStatus === "online" ? "is-online" : ""}`}
-              />
-              {backend.connectionStatus === "online"
-                ? "Local engine connected"
-                : "Local engine offline"}
-            </div>
-            <button
-              onClick={() => setPage("settings")}
-              className={page === "settings" ? "is-active" : ""}
+    <PracticePreferences value={session.preferences}>
+      <div
+        className={`studio-app ${dragging ? "file-over" : ""}`}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes("Files")) {
+            e.preventDefault();
+            setDragging(true);
+          }
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node))
+            setDragging(false);
+        }}
+        onDrop={drop}
+      >
+        <a href="#main-content" className="skip-link">
+          Skip to workspace
+        </a>
+        <TitleBar />
+        <div className="studio-body">
+          <aside className="studio-sidebar">
+            <a
+              className="wordmark"
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                setPage("workspace");
+              }}
             >
-              <Settings2 size={19} /> Settings
-            </button>
-            <span>Made for the way you practice.</span>
-          </div>
-        </aside>
-        <main id="main-content" className="studio-main">
-          <header className="studio-topbar">
-            <div className="breadcrumbs">
-              <span>Studio</span>
-              <ChevronRight size={14} />
+              <span className="sidebar-brand-icon">
+                <AppLogo />
+              </span>
               <strong>
-                {page === "workspace"
-                  ? "Workspace"
-                  : page === "library"
-                    ? "Library"
-                    : page === "lyrics"
-                      ? "Lyrics"
-                      : page === "guitar"
-                        ? "Guitar"
-                        : page === "piano"
-                          ? "Piano"
-                          : "Settings"}
+                DeChord<span>studio</span>
               </strong>
-            </div>
-            <div>
-              <button
-                className="button-muted customize-button"
-                onClick={() => {
-                  setPage("workspace");
-                  setCustomizing((v) => !v);
-                }}
+            </a>
+            <nav aria-label="Main navigation">
+              {nav.map(({ id, icon: Icon, label }) => (
+                <button
+                  key={id}
+                  className={page === id ? "is-active" : ""}
+                  onClick={() => setPage(id)}
+                >
+                  <Icon size={20} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </nav>
+            <div className="sidebar-library">
+              <div className="sidebar-library-heading">
+                <span>Your music</span>
+                <button
+                  className="icon-button"
+                  aria-label="Import song"
+                  onClick={() => fileInput.current?.click()}
+                >
+                  <Upload size={15} />
+                </button>
+              </div>
+              <div
+                className="sidebar-song-list"
+                role="region"
+                aria-label="Your music songs"
+                tabIndex={0}
+                data-scroll-area
               >
-                <SlidersHorizontal size={16} />{" "}
-                {customizing ? "Finish arranging" : "Customize"}
-              </button>
-              <button
-                className="button-primary"
-                onClick={() => fileInput.current?.click()}
-              >
-                <Upload size={16} />
-                <span>Import audio</span>
-              </button>
-            </div>
-          </header>
-          <input
-            className="sr-only"
-            type="file"
-            accept="audio/*,.lrc,.txt"
-            ref={fileInput}
-            onChange={(e) => {
-              if (e.target.files?.[0]) importFile(e.target.files[0]);
-              e.target.value = "";
-            }}
-          />
-          <div className="main-scroll">
-            {player.audioError && (
-              <div className="error-banner" role="alert">
-                <strong>Playback unavailable</strong>
-                <span>{player.audioError}</span>
-              </div>
-            )}
-            {sampler.error && (
-              <div className="error-banner" role="status">
-                Note preview unavailable: {sampler.error}
-              </div>
-            )}
-            {importError && (
-              <div className="error-banner" role="alert">
-                {importError}
-              </div>
-            )}
-            {page === "workspace" && (
-              <>
-                <section className="session-heading">
-                  <div className="session-art">
-                    {backend.albumArtUrl ? (
-                      <img src={backend.albumArtUrl} alt="Song artwork" />
-                    ) : (
-                      <AudioLines size={42} />
-                    )}
-                  </div>
-                  <div>
-                    <span className="eyebrow">
-                      {backend.usingMock
-                        ? "Explore the demo"
-                        : "Your practice session"}
-                    </span>
-                    <h1>{workspace.song.title}</h1>
-                    <p>
-                      {workspace.song.artist} <span>·</span>{" "}
-                      {formatTime(player.playback.durationSeconds)}{" "}
-                      <span>·</span> {workspace.analysis.key}{" "}
-                      {baseTempo && (
-                        <>
-                          <span>·</span> {Math.round(baseTempo)} BPM
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <div className="current-chord-chip">
-                    <span>Current chord</span>
-                    <strong>{player.currentChord.label}</strong>
-                    <small>
-                      {player.currentChord.tones.map((t) => t.note).join(" · ")}
-                    </small>
-                  </div>
-                </section>
-                {backend.error && (
-                  <div className="error-banner" role="alert">
-                    <strong>Analysis needs attention</strong>
-                    <span>{backend.error}</span>
-                    <button onClick={() => void backend.refreshHealth()}>
-                      Check engine
-                    </button>
-                  </div>
-                )}
-                <WidgetGrid
-                  render={renderWidget}
-                  customizing={customizing}
-                  onCustomizing={setCustomizing}
-                  hasLyrics={
-                    backend.lyrics.synced && backend.lyrics.lines.length > 0
-                  }
-                />
-              </>
-            )}
-            {page === "library" && (
-              <section className="library-page">
-                <span className="eyebrow">Your collection</span>
-                <h1>Keep learning.</h1>
-                <p>
-                  Local songs, saved chords, and somewhere to pick up again.
-                </p>
-                <input
-                  className="library-search"
-                  placeholder="Search your songs"
-                  aria-label="Search song library"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <div className="library-table">
-                  <div className="library-table-head">
-                    <span>Title</span>
-                    <span>Source</span>
-                    <span>Duration</span>
-                  </div>
-                  {filteredSongs.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => {
-                        void backend.openSong(s);
-                        setPage("workspace");
-                      }}
-                    >
-                      <span>
-                        <SongCover songId={s.id} />
-                        <strong>{s.title}</strong>
-                      </span>
-                      <span>Local file</span>
-                      <span>{formatTime(s.duration ?? 0)}</span>
-                    </button>
-                  ))}
-                </div>
-                {!filteredSongs.length && (
-                  <div className="empty-state">
-                    <FolderOpen size={38} />
-                    <strong>
-                      {search
-                        ? "No matching songs"
-                        : "Your next song starts here."}
-                    </strong>
-                    <p>
-                      Import a recording. Audio and analysis stay on this
-                      machine.
-                    </p>
-                    <button
-                      className="button-primary"
-                      onClick={() => fileInput.current?.click()}
-                    >
-                      Import your first song
-                    </button>
-                  </div>
-                )}
-              </section>
-            )}
-            {page === "lyrics" && (
-              <section className="lyrics-page">
-                <span className="eyebrow">Sing it back</span>
-                <h1>{workspace.song.title}</h1>
-                <LyricsWidget
-                  backend={backend}
-                  time={player.playback.currentTimeSeconds}
-                  onSeek={player.seek}
-                />
-              </section>
-            )}
-            {(page === "guitar" || page === "piano") && (
-              <InstrumentPractice
-                instrument={page}
-                chords={workspace.chords}
-                currentChord={player.currentChord}
-                time={player.playback.currentTimeSeconds}
-                onSeek={player.seek}
-                onNotePreview={(note, octave) =>
-                  sampler.playNote("piano", note, octave)
-                }
-              />
-            )}
-            {page === "settings" && (
-              <section className="settings-page">
-                <span className="eyebrow">Settle in</span>
-                <h1>Your studio.</h1>
-                <div className="setting-row">
-                  <div>
-                    <h3>Automatic lyrics</h3>
-                    <p>
-                      Look up synced lyrics when you open a song. Sends song
-                      metadata to LRCLIB.
-                    </p>
-                  </div>
-                  <input
-                    aria-label="Automatic lyric lookup"
-                    type="checkbox"
-                    checked={backend.autoLyrics}
-                    onChange={(e) => backend.setAutoLyrics(e.target.checked)}
-                  />
-                </div>
-                <div className="setting-row">
-                  <div>
-                    <h3>Local analysis engine</h3>
-                    <p>
-                      {backend.connectionStatus === "online"
-                        ? "Connected on this machine."
-                        : "Start the backend to analyze and save your songs."}
-                    </p>
-                    <code>
-                      python -m uvicorn backend.app.main:app --host 127.0.0.1
-                      --port 8765
-                    </code>
-                    <p>
-                      {backend.capabilities
-                        ? Object.entries(backend.capabilities.engines)
-                            .map(
-                              ([name, ready]) =>
-                                `${name}: ${ready ? "installed" : "missing"}`,
-                            )
-                            .join(" · ")
-                        : "Engine capabilities unavailable."}
-                    </p>
-                  </div>
-                  <button onClick={() => void backend.refreshHealth()}>
-                    Reconnect
-                  </button>
-                </div>
-                <div className="setting-row">
-                  <div>
-                    <h3>Workspace layout</h3>
-                    <p>
-                      Move, resize, add, or hide widgets. Layouts are saved
-                      separately for wide and compact screens.
-                    </p>
-                  </div>
+                {backend.library.slice(0, 6).map((s) => (
                   <button
+                    key={s.id}
+                    className={
+                      s.id === backend.song?.id
+                        ? "library-mini is-active"
+                        : "library-mini"
+                    }
                     onClick={() => {
+                      void backend.openSong(s);
                       setPage("workspace");
-                      setCustomizing(true);
                     }}
                   >
-                    Arrange widgets
+                    <SongCover songId={s.id} />
+                    <span>
+                      <strong>{s.title}</strong>
+                      <small>Local audio</small>
+                    </span>
                   </button>
+                ))}
+                {!backend.library.length && (
+                  <p>Keep the songs you're learning close at hand.</p>
+                )}
+              </div>
+            </div>
+            <div className="sidebar-bottom">
+              <div className="local-badge">
+                <span
+                  className={`status-dot ${backend.connectionStatus === "online" ? "is-online" : ""}`}
+                />
+                {backend.connectionStatus === "online"
+                  ? "Local engine connected"
+                  : "Local engine offline"}
+              </div>
+              <button
+                onClick={() => setPage("settings")}
+                className={page === "settings" ? "is-active" : ""}
+              >
+                <Settings2 size={19} /> Settings
+              </button>
+              <span>Made for the way you practice.</span>
+            </div>
+          </aside>
+          <main id="main-content" className="studio-main">
+            <header className="studio-topbar">
+              <div className="breadcrumbs">
+                <span>Studio</span>
+                <ChevronRight size={14} />
+                <strong>
+                  {page === "workspace"
+                    ? "Workspace"
+                    : page === "library"
+                      ? "Library"
+                      : page === "lyrics"
+                        ? "Lyrics"
+                        : page === "guitar"
+                          ? "Guitar"
+                          : page === "piano"
+                            ? "Piano"
+                            : "Settings"}
+                </strong>
+              </div>
+              <div>
+                <button
+                  className="button-muted customize-button"
+                  onClick={() => {
+                    setPage("workspace");
+                    setCustomizing((v) => !v);
+                  }}
+                >
+                  <SlidersHorizontal size={16} />{" "}
+                  {customizing ? "Finish arranging" : "Customize"}
+                </button>
+                <button
+                  className="button-primary"
+                  onClick={() => fileInput.current?.click()}
+                >
+                  <Upload size={16} />
+                  <span>Import audio</span>
+                </button>
+              </div>
+            </header>
+            <input
+              className="sr-only"
+              type="file"
+              accept="audio/*,.lrc,.txt"
+              ref={fileInput}
+              onChange={(e) => {
+                if (e.target.files?.[0]) importFile(e.target.files[0]);
+                e.target.value = "";
+              }}
+            />
+            <div className="main-scroll">
+              {session.storageError && (
+                <div className="error-banner" role="status">
+                  {session.storageError}
                 </div>
-                <div className="setting-row">
-                  <BookOpen size={24} />
+              )}
+              {player.audioError && (
+                <div className="error-banner" role="alert">
+                  <strong>Playback unavailable</strong>
+                  <span>{player.audioError}</span>
+                </div>
+              )}
+              {sampler.error && (
+                <div className="error-banner" role="status">
+                  Note preview unavailable: {sampler.error}
+                </div>
+              )}
+              {importError && (
+                <div className="error-banner" role="alert">
+                  {importError}
+                </div>
+              )}
+              {page === "workspace" && (
+                <>
+                  <section className="session-heading">
+                    <div className="session-art">
+                      {backend.albumArtUrl ? (
+                        <img src={backend.albumArtUrl} alt="Song artwork" />
+                      ) : (
+                        <AudioLines size={42} />
+                      )}
+                    </div>
+                    <div>
+                      <span className="eyebrow">
+                        {backend.usingMock
+                          ? "Explore the demo"
+                          : "Your practice session"}
+                      </span>
+                      <h1>{workspace.song.title}</h1>
+                      <p>
+                        {workspace.song.artist} <span>·</span>{" "}
+                        {formatTime(player.playback.durationSeconds)}{" "}
+                        <span>·</span> {workspace.analysis.key}{" "}
+                        {baseTempo && (
+                          <>
+                            <span>·</span> {Math.round(baseTempo)} BPM
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <div className="current-chord-chip">
+                      <span>Current chord</span>
+                      <strong>{player.currentChord.label}</strong>
+                      <small>
+                        {player.currentChord.tones
+                          .map((t) => t.note)
+                          .join(" · ")}
+                      </small>
+                    </div>
+                  </section>
+                  {backend.error && (
+                    <div className="error-banner" role="alert">
+                      <strong>Analysis needs attention</strong>
+                      <span>{backend.error}</span>
+                      <button onClick={() => void backend.refreshHealth()}>
+                        Check engine
+                      </button>
+                    </div>
+                  )}
+                  <WidgetGrid
+                    render={renderWidget}
+                    customizing={customizing}
+                    onCustomizing={setCustomizing}
+                    hasLyrics={
+                      backend.lyrics.synced && backend.lyrics.lines.length > 0
+                    }
+                  />
+                </>
+              )}
+              {page === "library" && (
+                <section className="library-page">
+                  <span className="eyebrow">Your collection</span>
+                  <h1>Keep learning.</h1>
                   <p>
-                    Space to play or pause · Arrow keys to seek · Click a lyric
-                    to jump · Drag the timeline to loop
+                    Local songs, saved chords, and somewhere to pick up again.
                   </p>
-                </div>
-              </section>
-            )}
-          </div>
-        </main>
-      </div>
-      <div className="practice-dock">
-        <Timeline
-          chords={workspace.chords}
-          currentTimeSeconds={player.playback.currentTimeSeconds}
-          readTime={player.readTime}
-          isPlaying={player.playback.isPlaying}
-          durationSeconds={player.playback.durationSeconds}
-          tempoBpm={baseTempo}
-          loopRange={loop}
-          onLoopChange={setLoop}
-          onSeek={player.seek}
-        />
-      </div>
-      <TransportBar
-        playback={player.playback}
-        disabled={!backend.audioSourceUrl && !backend.usingMock}
-        baseTempoBpm={baseTempo}
-        tempoOffsetBpm={tempo}
-        trackVolume={volume}
-        transposeSemitones={transpose}
-        onTogglePlayback={player.togglePlayback}
-        onSeek={player.seek}
-        onSkip={player.skipBy}
-        onTempoOffsetChange={setTempo}
-        onTrackVolumeChange={setVolume}
-        onTransposeChange={setTranspose}
-      />
-      {dragging && (
-        <div className="file-drop-overlay">
-          <Upload size={40} />
-          <strong>Drop a song. Make it yours.</strong>
-          <span>Audio files · LRC and text lyrics</span>
+                  <input
+                    className="library-search"
+                    placeholder="Search your songs"
+                    aria-label="Search song library"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <div className="library-table">
+                    <div className="library-table-head">
+                      <span>Title</span>
+                      <span>Source</span>
+                      <span>Duration</span>
+                    </div>
+                    {filteredSongs.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          void backend.openSong(s);
+                          setPage("workspace");
+                        }}
+                      >
+                        <span>
+                          <SongCover songId={s.id} />
+                          <strong>{s.title}</strong>
+                        </span>
+                        <span>Local file</span>
+                        <span>{formatTime(s.duration ?? 0)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {!filteredSongs.length && (
+                    <div className="empty-state">
+                      <FolderOpen size={38} />
+                      <strong>
+                        {search
+                          ? "No matching songs"
+                          : "Your next song starts here."}
+                      </strong>
+                      <p>
+                        Import a recording. Audio and analysis stay on this
+                        machine.
+                      </p>
+                      <button
+                        className="button-primary"
+                        onClick={() => fileInput.current?.click()}
+                      >
+                        Import your first song
+                      </button>
+                    </div>
+                  )}
+                </section>
+              )}
+              {page === "lyrics" && (
+                <section className="lyrics-page">
+                  <span className="eyebrow">Sing it back</span>
+                  <h1>{workspace.song.title}</h1>
+                  <LyricsWidget
+                    backend={backend}
+                    time={player.playback.currentTimeSeconds}
+                    onSeek={player.seek}
+                  />
+                </section>
+              )}
+              {(page === "guitar" || page === "piano") && (
+                <InstrumentPractice
+                  instrument={page}
+                  chords={workspace.chords}
+                  currentChord={player.currentChord}
+                  time={player.playback.currentTimeSeconds}
+                  onSeek={player.seek}
+                  onNotePreview={(note, octave) =>
+                    sampler.playNote("piano", note, octave)
+                  }
+                />
+              )}
+              {page === "settings" && (
+                <section className="settings-page">
+                  <span className="eyebrow">Settle in</span>
+                  <h1>Your studio.</h1>
+                  <div className="setting-row">
+                    <div>
+                      <h3>Pick up where you left off</h3>
+                      <p>
+                        Song position, loop, tempo, transposition, capo and
+                        lyric offset are saved on this device. Reopening keeps
+                        audio paused. Browser and desktop profiles save
+                        separately.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="setting-row">
+                    <div>
+                      <h3>Automatic lyrics</h3>
+                      <p>
+                        Look up synced lyrics when you open a song. Sends song
+                        metadata to LRCLIB.
+                      </p>
+                    </div>
+                    <input
+                      aria-label="Automatic lyric lookup"
+                      type="checkbox"
+                      checked={backend.autoLyrics}
+                      onChange={(e) => backend.setAutoLyrics(e.target.checked)}
+                    />
+                  </div>
+                  <div className="setting-row">
+                    <div>
+                      <h3>Local analysis engine</h3>
+                      <p>
+                        {backend.connectionStatus === "online"
+                          ? "Connected on this machine."
+                          : "Start the backend to analyze and save your songs."}
+                      </p>
+                      <code>
+                        python -m uvicorn backend.app.main:app --host 127.0.0.1
+                        --port 8765
+                      </code>
+                      <p>
+                        {backend.capabilities
+                          ? Object.entries(backend.capabilities.engines)
+                              .map(
+                                ([name, ready]) =>
+                                  `${name}: ${ready ? "installed" : "missing"}`,
+                              )
+                              .join(" · ")
+                          : "Engine capabilities unavailable."}
+                      </p>
+                    </div>
+                    <button onClick={() => void backend.refreshHealth()}>
+                      Reconnect
+                    </button>
+                  </div>
+                  <div className="setting-row">
+                    <div>
+                      <h3>Workspace layout</h3>
+                      <p>
+                        Move, resize, add, or hide widgets. Layouts are saved
+                        separately for wide and compact screens.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setPage("workspace");
+                        setCustomizing(true);
+                      }}
+                    >
+                      Arrange widgets
+                    </button>
+                  </div>
+                  <div className="setting-row">
+                    <BookOpen size={24} />
+                    <p>
+                      Space to play or pause · Arrow keys to seek · Click a
+                      lyric to jump · Drag the timeline to loop
+                    </p>
+                  </div>
+                </section>
+              )}
+            </div>
+          </main>
         </div>
-      )}
-    </div>
+        <div className="practice-dock">
+          <Timeline
+            chords={workspace.chords}
+            currentTimeSeconds={player.playback.currentTimeSeconds}
+            readTime={player.readTime}
+            isPlaying={player.playback.isPlaying}
+            durationSeconds={player.playback.durationSeconds}
+            tempoBpm={baseTempo}
+            loopRange={loop}
+            onLoopChange={setLoop}
+            onSeek={player.seek}
+          />
+        </div>
+        <TransportBar
+          playback={player.playback}
+          disabled={!backend.audioSourceUrl && !backend.usingMock}
+          baseTempoBpm={baseTempo}
+          tempoOffsetBpm={tempo}
+          trackVolume={volume}
+          transposeSemitones={transpose}
+          onTogglePlayback={player.togglePlayback}
+          onSeek={player.seek}
+          onSkip={player.skipBy}
+          onTempoOffsetChange={setTempo}
+          onTrackVolumeChange={setVolume}
+          onTransposeChange={setTranspose}
+        />
+        {dragging && (
+          <div className="file-drop-overlay">
+            <Upload size={40} />
+            <strong>Drop a song. Make it yours.</strong>
+            <span>Audio files · LRC and text lyrics</span>
+          </div>
+        )}
+      </div>
+    </PracticePreferences>
   );
 }
