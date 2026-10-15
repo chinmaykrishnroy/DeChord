@@ -104,7 +104,11 @@ jobs:
         run: npm run tauri:build -- --config src-tauri/tauri.release.conf.json --bundles nsis
         working-directory: frontend
       - if: runner.os == 'Linux'
-        run: npm run tauri:build -- --verbose --config src-tauri/tauri.release.conf.json --bundles deb,appimage
+        run: |
+          # linuxdeploy scans private PyInstaller ELF files outside the bootloader.
+          # Give its resolver the same library directories the engine uses.
+          engine_libs="$(find "$PWD/src-tauri/resources/engine/_internal" -type f -name '*.so*' -printf '%h\n' | sort -u | paste -sd:)"
+          LD_LIBRARY_PATH="$engine_libs:${LD_LIBRARY_PATH:-}" npm run tauri:build -- --verbose --config src-tauri/tauri.release.conf.json --bundles deb,appimage
         working-directory: frontend
         env:
           APPIMAGE_EXTRACT_AND_RUN: '1'

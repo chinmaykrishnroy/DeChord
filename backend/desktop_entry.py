@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import multiprocessing
 import os
 from pathlib import Path
@@ -22,6 +23,16 @@ def main():
         from backend.core.integrity import verify_models
 
         verify_models(resource_root)
+        # On Windows, lazy torch import from the analysis thread can deadlock
+        # while its native extension imports NumPy under the DLL loader lock.
+        # Initialize the native runtimes in dependency order on the main thread.
+        for module in ("numpy", "torch", "lv_chordia"):
+            print(f"Initializing {module}", file=sys.stderr, flush=True)
+            importlib.import_module(module)
+    if os.environ.get("DECHORD_DIAGNOSTICS") == "1":
+        import faulthandler
+
+        faulthandler.dump_traceback_later(60, repeat=True)
     if data_dir := os.environ.get("DECHORD_DATA_DIR"):
         os.environ.setdefault("NUMBA_CACHE_DIR", str(Path(data_dir) / "numba"))
     binary_dir = resource_root / "bin"

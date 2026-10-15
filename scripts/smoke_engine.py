@@ -32,6 +32,7 @@ def main():
             "DECHORD_ENGINE_TOKEN": token,
             "NUMBA_CACHE_DIR": str(folder / "numba"),
             "OMP_NUM_THREADS": "2",
+            "DECHORD_DIAGNOSTICS": "1",
         }
         base = f"http://127.0.0.1:{port}"
 
@@ -137,6 +138,9 @@ def main():
                     ),
                     flush=True,
                 )
+            except BaseException:
+                print((folder / "engine.log").read_text(errors="replace"), flush=True)
+                raise
             finally:
                 child.stdin.close()
                 try:
