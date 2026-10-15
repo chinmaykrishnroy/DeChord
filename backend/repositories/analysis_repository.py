@@ -44,6 +44,10 @@ class AnalysisRepository:
             row = connection.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
             return self._song_from_row(row) if row else None
 
+    def list_songs(self) -> list[Song]:
+        with self.database.connect() as connection:
+            return [self._song_from_row(row) for row in connection.execute("SELECT * FROM songs ORDER BY created_at DESC LIMIT 200").fetchall()]
+
     def create_job(
         self,
         song_id: str,
@@ -277,17 +281,17 @@ class AnalysisRepository:
                     ),
                 )
 
-    def list_batches(self, job_id: str, include_segments: bool = True) -> list[AnalysisBatch]:
+    def list_batches(self, job_id: str, include_segments: bool = True, after_index: int = -1, completed_only: bool = False) -> list[AnalysisBatch]:
         with self.database.connect() as connection:
             batch_rows = connection.execute(
-                "SELECT * FROM analysis_batches WHERE job_id = ? ORDER BY batch_index",
-                (job_id,),
+                "SELECT * FROM analysis_batches WHERE job_id = ? AND batch_index > ? AND (? = 0 OR status = 'completed') ORDER BY batch_index",
+                (job_id, after_index, int(completed_only)),
             ).fetchall()
             segments_by_batch: dict[int, list[ChordSegment]] = {}
             if include_segments:
                 segment_rows = connection.execute(
-                    "SELECT * FROM chord_segments WHERE job_id = ? ORDER BY start, end",
-                    (job_id,),
+                    "SELECT * FROM chord_segments WHERE job_id = ? AND batch_index > ? ORDER BY start, end",
+                    (job_id, after_index),
                 ).fetchall()
                 for row in segment_rows:
                     segments_by_batch.setdefault(row["batch_index"], []).append(self._segment_from_row(row))

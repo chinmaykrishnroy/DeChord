@@ -13,11 +13,12 @@ function readSynchsafeInt(bytes: Uint8Array, start: number) {
 
 function readBigEndianInt(bytes: Uint8Array, start: number) {
   return (
-    (bytes[start] << 24) |
-    (bytes[start + 1] << 16) |
-    (bytes[start + 2] << 8) |
-    bytes[start + 3]
-  ) >>> 0;
+    ((bytes[start] << 24) |
+      (bytes[start + 1] << 16) |
+      (bytes[start + 2] << 8) |
+      bytes[start + 3]) >>>
+    0
+  );
 }
 
 function findTerminator(bytes: Uint8Array, start: number, encoding: number) {
@@ -62,7 +63,13 @@ export async function extractAlbumArtUrl(file: File): Promise<string | null> {
     return null;
   }
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const header = new Uint8Array(await file.slice(0, 10).arrayBuffer());
+  if (header.length < 10 || readAscii(header, 0, 3) !== "ID3") return null;
+  const bytes = new Uint8Array(
+    await file
+      .slice(0, Math.min(8 * 1024 * 1024, 10 + readSynchsafeInt(header, 6)))
+      .arrayBuffer(),
+  );
   if (bytes.length < 20 || readAscii(bytes, 0, 3) !== "ID3") {
     return null;
   }
@@ -79,7 +86,9 @@ export async function extractAlbumArtUrl(file: File): Promise<string | null> {
     }
 
     const frameSize =
-      version === 4 ? readSynchsafeInt(bytes, offset + 4) : readBigEndianInt(bytes, offset + 4);
+      version === 4
+        ? readSynchsafeInt(bytes, offset + 4)
+        : readBigEndianInt(bytes, offset + 4);
     const frameStart = offset + 10;
     const frameEnd = Math.min(frameStart + frameSize, tagEnd);
     if (frameSize <= 0 || frameEnd <= frameStart) {

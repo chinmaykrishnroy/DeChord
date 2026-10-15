@@ -72,6 +72,7 @@ class BackendAudioServiceTests(unittest.TestCase):
         self.config = BackendConfig(
             database_path=self.root / "backend.sqlite3",
             work_dir=self.root / "work",
+            upload_dir=self.root / "uploads",
             default_engine="fake-chords",
             default_dictionary="test",
         )
@@ -100,18 +101,18 @@ class BackendAudioServiceTests(unittest.TestCase):
         song = self.service.import_uploaded_song("Nice Song.mp3", BytesIO(b"uploaded-audio"))
 
         self.assertEqual(song.title, "Nice Song")
-        self.assertTrue(Path(song.path).name.endswith("-Nice-Song.mp3"))
+        self.assertEqual(Path(song.path).name, f"{song.content_hash}.mp3")
 
-    def test_uploaded_media_is_removed_after_successful_analysis(self) -> None:
+    def test_uploaded_media_is_retained_after_successful_analysis(self) -> None:
         song = self.service.import_uploaded_song("Temp Song.mp3", BytesIO(b"uploaded-audio"))
         uploaded_path = Path(song.path)
 
         self.assertTrue(uploaded_path.exists())
         self.service.create_analysis_job(song.id, mode="preview", preview_seconds=30)
 
-        self.assertFalse(uploaded_path.exists())
+        self.assertTrue(uploaded_path.exists())
 
-    def test_cached_analysis_reuse_removes_new_uploaded_copy(self) -> None:
+    def test_cached_analysis_reuses_one_retained_source(self) -> None:
         first = self.service.import_uploaded_song("Cached Song.mp3", BytesIO(b"same-audio"))
         self.service.create_analysis_job(first.id, mode="preview", preview_seconds=30)
         second = self.service.import_uploaded_song("Cached Song.mp3", BytesIO(b"same-audio"))
@@ -120,7 +121,9 @@ class BackendAudioServiceTests(unittest.TestCase):
         cached = self.service.create_analysis_job(second.id, mode="preview", preview_seconds=30)
 
         self.assertEqual(cached.status, "completed")
-        self.assertFalse(second_path.exists())
+        self.assertTrue(second_path.exists())
+        self.assertEqual(first.path, second.path)
+        self.assertEqual(len(list(self.config.upload_dir.iterdir())), 1)
 
     def test_preview_analyzes_only_preview_window(self) -> None:
         song = self.service.import_song(str(self.audio))
@@ -231,7 +234,7 @@ class BackendAudioServiceTests(unittest.TestCase):
         second = self.service.create_analysis_job(song.id, mode="preview", preview_seconds=30, force=True)
 
         self.assertNotEqual(first.id, second.id)
-        self.assertIsNone(self.service.get_job(first.id))
+        self.assertEqual(self.service.get_job(first.id).status, "completed")
 
     def test_corrections_override_timeline_segments(self) -> None:
         song = self.service.import_song(str(self.audio))

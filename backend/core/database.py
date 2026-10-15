@@ -118,6 +118,7 @@ class AnalysisDatabase:
     def initialize(self) -> None:
         connection = sqlite3.connect(self.path)
         try:
+            connection.execute("PRAGMA journal_mode = WAL")
             connection.executescript(SCHEMA)
             self._migrate(connection)
             connection.commit()
@@ -140,7 +141,7 @@ class AnalysisDatabase:
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(self.path)
+        connection = sqlite3.connect(self.path, timeout=30)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         try:

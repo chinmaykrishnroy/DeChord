@@ -1,24 +1,43 @@
 from __future__ import annotations
 
 import json
-import re
-from urllib.parse import urlencode
-from urllib.request import Request as UrlRequest, urlopen
+import asyncio
+import importlib.util
+import shutil
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
+from backend.services.guitar_service import plan_capo
 
 from backend.core.config import BACKEND_ROOT
+from backend.core.runtime import source_revision
 from backend.core.media import MediaError
 from backend.domain.models import Correction
 from backend.services.analysis_service import AnalysisService
+from backend.services.artwork_service import ArtworkService
+from backend.services.job_queue import AnalysisQueue
+from backend.services.lyrics_service import _looks_synced_lyrics, _download_lrclib_lyrics
 
 
 class ImportSongRequest(BaseModel):
     path: str
+
+class GuitarPlanChord(BaseModel):
+    label: str = Field(max_length=40)
+    duration: float = Field(default=1, gt=0, le=86400, allow_inf_nan=False)
+
+class GuitarPlanRequest(BaseModel):
+    chords: list[GuitarPlanChord] = Field(max_length=256)
+    easy_shapes: list[str] | None = Field(default=None, max_length=64)
+    mode: Literal['open', 'barre'] = 'open'
+    capo: int | None = Field(default=None, ge=0, le=12)
+    max_capo: int = Field(default=7, ge=0, le=12)
 
 
 class AnalysisJobRequest(BaseModel):
@@ -52,122 +71,18 @@ class LyricsDownloadRequest(BaseModel):
     duration: float | None = None
 
 
-def _looks_synced_lyrics(text: str) -> bool:
-    return any(line.startswith("[") and ":" in line[:12] for line in text.splitlines())
-
-
-_LOCAL_ARTISTS = {"", "local file", "local demo", "unknown artist"}
-
-
-def _clean_lyric_lookup_text(value: str | None) -> str:
-    text = (value or "").strip()
-    text = re.sub(r"\.[A-Za-z0-9]{2,5}$", "", text)
-    text = text.replace("_", " ")
-    text = re.sub(r"\s+", " ", text)
-    text = re.sub(
-        r"\s*(?:\(|\[)\s*(?:official|lyrics?|lyric video|audio|video|hd|4k).*$",
-        "",
-        text,
-        flags=re.IGNORECASE,
-    )
-    return text.strip(" -_")
-
-
-def _split_artist_title(title: str, artist: str | None) -> tuple[str, str | None]:
-    clean_title = _clean_lyric_lookup_text(title)
-    clean_artist = _clean_lyric_lookup_text(artist)
-
-    if clean_artist.lower() in _LOCAL_ARTISTS:
-        clean_artist = ""
-
-    if not clean_artist:
-        parts = re.split(r"\s+[-–—]\s+", clean_title, maxsplit=1)
-        if len(parts) == 2 and all(parts):
-            clean_artist, clean_title = parts[0].strip(), parts[1].strip()
-
-    return clean_title, clean_artist or None
-
-
-def _lrclib_queries(title: str, artist: str | None, duration: float | None) -> list[dict[str, str]]:
-    clean_title, clean_artist = _split_artist_title(title, artist)
-    original_title = _clean_lyric_lookup_text(title)
-    rounded_duration = str(round(duration)) if duration else None
-    raw_queries: list[dict[str, str]] = []
-
-    if clean_title:
-        base = {"track_name": clean_title}
-        if clean_artist:
-            base["artist_name"] = clean_artist
-        raw_queries.append({**base, **({"duration": rounded_duration} if rounded_duration else {})})
-        raw_queries.append(base)
-
-    if original_title and original_title != clean_title:
-        raw_queries.append({"track_name": original_title})
-
-    seen: set[tuple[tuple[str, str], ...]] = set()
-    queries: list[dict[str, str]] = []
-    for query in raw_queries:
-        key = tuple(sorted(query.items()))
-        if query.get("track_name") and key not in seen:
-            seen.add(key)
-            queries.append(query)
-    return queries
-
-
-def _pick_lrclib_result(payload: Any, duration: float | None) -> dict[str, Any] | None:
-    if not isinstance(payload, list) or not payload:
-        return None
-
-    with_lyrics = [
-        item for item in payload
-        if isinstance(item, dict) and (item.get("syncedLyrics") or item.get("plainLyrics"))
-    ]
-    if not with_lyrics:
-        return None
-
-    if duration:
-        return min(
-            with_lyrics,
-            key=lambda item: abs(float(item.get("duration") or duration) - duration),
-        )
-
-    return with_lyrics[0]
-
-
-def _download_lrclib_lyrics(title: str, artist: str | None, duration: float | None) -> tuple[str, bool] | None:
-    last_error: Exception | None = None
-    for query in _lrclib_queries(title, artist, duration):
-        url = f"https://lrclib.net/api/search?{urlencode(query)}"
-        request = UrlRequest(url, headers={"User-Agent": "DeChord/0.1 local-desktop"})
-        try:
-            with urlopen(request, timeout=12) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except Exception as exc:
-            last_error = exc
-            continue
-
-        best = _pick_lrclib_result(payload, duration)
-        if best is None:
-            continue
-
-        synced = best.get("syncedLyrics")
-        plain = best.get("plainLyrics")
-        if synced:
-            return str(synced), True
-        if plain:
-            return str(plain), False
-    if last_error is not None:
-        raise last_error
-    return None
-
-
 def build_router(service: AnalysisService | None = None) -> APIRouter:
     router = APIRouter()
     analysis_service = service or AnalysisService()
+    artwork = ArtworkService(analysis_service.config.work_dir / "artwork")
+    revision = source_revision(BACKEND_ROOT.parent)
+    queue = AnalysisQueue(analysis_service)
+    router.analysis_queue = queue
 
-    @router.get("/", include_in_schema=False)
-    def tester_page() -> FileResponse:
-        return FileResponse(BACKEND_ROOT / "test_backend.html")
+    @router.post('/guitar/plan')
+    def guitar_plan(request: GuitarPlanRequest):
+        return plan_capo([c.model_dump() for c in request.chords], request.easy_shapes,
+                         request.mode, request.capo, request.max_capo)
 
     @router.get("/tester", include_in_schema=False)
     def tester_alias() -> FileResponse:
@@ -175,7 +90,40 @@ def build_router(service: AnalysisService | None = None) -> APIRouter:
 
     @router.get("/health")
     def health() -> dict[str, str]:
-        return {"status": "ok"}
+        return {"status": "ok", "service": "dechord", "revision": revision}
+
+    @router.get("/capabilities")
+    def capabilities():
+        engines = {name: importlib.util.find_spec(module) is not None for name, module in (("lv-chordia", "lv_chordia"), ("madmom", "madmom"))}
+        return {"engines": engines, "analysis_ready": any(engines.values()), "selected_engine": analysis_service.chord_engine.engine_id, "key_engine": analysis_service.key_engine.engine_id, "tempo_engine": analysis_service.tempo_engine.engine_id, "streaming": True, "managed_library": True, "ffmpeg": bool(shutil.which("ffmpeg")), "queue_capacity": queue.capacity}
+
+    @router.get("/songs")
+    def songs():
+        return {"songs": [song.to_dict() for song in analysis_service.repository.list_songs()]}
+
+    @router.get("/songs/{song_id}/audio")
+    def song_audio(song_id: str):
+        song = analysis_service.repository.get_song(song_id)
+        if song is None or not Path(song.path).is_file():
+            raise HTTPException(status_code=404, detail="Source audio is unavailable. Reimport this song.")
+        return FileResponse(song.path)
+
+    @router.get("/songs/{song_id}/artwork")
+    def song_artwork(song_id: str):
+        song = analysis_service.repository.get_song(song_id)
+        if song is None:
+            raise HTTPException(status_code=404, detail="Song not found.")
+        try:
+            thumbnail = artwork.thumbnail(song.path)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Source audio is unavailable.") from exc
+        except MediaError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        if thumbnail is None:
+            raise HTTPException(status_code=404, detail="This song has no album artwork.")
+        return FileResponse(thumbnail, media_type="image/jpeg", headers={
+            "Cache-Control": "private, max-age=86400",
+        })
 
     @router.post("/songs/import")
     def import_song(request: ImportSongRequest) -> dict[str, Any]:
@@ -200,14 +148,17 @@ def build_router(service: AnalysisService | None = None) -> APIRouter:
         if not isinstance(upload, UploadFile):
             raise HTTPException(status_code=400, detail="Upload field 'file' is required.")
         try:
-            return analysis_service.import_uploaded_song(upload.filename or "audio", upload.file).to_dict()
+            song = await run_in_threadpool(analysis_service.import_uploaded_song, upload.filename or "audio", upload.file)
+            return song.to_dict()
+        except ValueError as exc:
+            raise HTTPException(status_code=413, detail=str(exc)) from exc
         except MediaError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         finally:
             await upload.close()
 
     @router.post("/analysis/jobs")
-    def create_job(request: AnalysisJobRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
+    def create_job(request: AnalysisJobRequest) -> dict[str, Any]:
         try:
             job = analysis_service.create_analysis_job(
                 request.song_id,
@@ -218,12 +169,42 @@ def build_router(service: AnalysisService | None = None) -> APIRouter:
                 run_immediately=False,
             )
             if job.status in {"queued", "running", "failed"}:
-                background_tasks.add_task(analysis_service.run_job, job.id)
+                queue.submit(job.id)
             return job.to_dict()
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+    @router.get("/analysis/jobs/{job_id}/events")
+    async def job_events(job_id: str, request: Request, after: int = -1):
+        if analysis_service.get_job(job_id) is None:
+            raise HTTPException(status_code=404, detail="Job not found")
+        async def events():
+            cursor = after
+            signature = None
+            ticks = 0
+            while not await request.is_disconnected():
+                job = await run_in_threadpool(analysis_service.get_job, job_id)
+                if job is None:
+                    break
+                batches = await run_in_threadpool(analysis_service.repository.list_batches, job_id, True, cursor, True)
+                next_signature = (job.status, job.progress, job.updated_at)
+                if batches or signature != next_signature:
+                    payload = {"job": job.to_dict(), "batches": [batch.to_dict() for batch in batches]}
+                    yield f"data: {json.dumps(payload)}\n\n"
+                    if batches:
+                        cursor = max(batch.batch_index for batch in batches)
+                    signature = next_signature
+                elif ticks % 20 == 0:
+                    yield ": keepalive\n\n"
+                if job.status in {"completed", "failed", "cancelled"}:
+                    break
+                ticks += 1
+                await asyncio.sleep(0.5)
+        return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     @router.get("/analysis/jobs/{job_id}")
     def get_job(job_id: str) -> dict[str, Any]:

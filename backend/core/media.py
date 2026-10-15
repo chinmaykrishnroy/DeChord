@@ -39,7 +39,7 @@ class MediaTools:
             "json",
             str(path),
         ]
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
         if result.returncode != 0:
             return None
 
@@ -49,6 +49,22 @@ class MediaTools:
             return duration if duration > 0 else None
         except (KeyError, TypeError, ValueError, json.JSONDecodeError):
             return None
+
+    def extract_artwork(self, audio_path: Path, output: Path) -> bool:
+        """Extract the first cover image, bounded to a 160px square thumbnail."""
+        self._ensure_ffmpeg()
+        try:
+            result = subprocess.run(
+                ["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(audio_path),
+                 "-map", "0:v:0", "-frames:v", "1", "-an",
+                 "-vf", "scale=160:160:force_original_aspect_ratio=increase,crop=160:160",
+                 "-q:v", "3", str(output)],
+                capture_output=True, check=False, timeout=15,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise MediaError("Album artwork could not be extracted.") from exc
+        return result.returncode == 0 and output.is_file() and output.stat().st_size > 0
 
     def extract_piece(self, audio_path: str | Path, start: float, duration: float) -> Path:
         path = Path(audio_path)
@@ -78,7 +94,7 @@ class MediaTools:
             "2",
             str(output),
         ]
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=180)
         if result.returncode != 0:
             raise MediaError(result.stderr.strip() or "FFmpeg failed to extract audio piece.")
         return output

@@ -21,6 +21,7 @@ async function runWindowAction(action: "minimize" | "maximize" | "close") {
 }
 
 export function TitleBar() {
+  if (!("__TAURI_INTERNALS__" in window)) return null;
   return (
     <header className="titlebar" data-tauri-drag-region>
       <div className="titlebar__brand" data-tauri-drag-region>

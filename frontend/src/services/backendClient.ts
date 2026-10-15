@@ -7,10 +7,16 @@ import type {
 } from "../types/music";
 import { buildTones, displayChordLabel } from "../utils/musicTheory";
 
-const DEFAULT_BACKEND_URL = "http://127.0.0.1:8765";
+const DEFAULT_BACKEND_URL = import.meta.env.DEV
+  ? "/api"
+  : "http://127.0.0.1:8765";
 
 export const backendBaseUrl =
   import.meta.env.VITE_DECHORD_BACKEND_URL ?? DEFAULT_BACKEND_URL;
+
+export function songArtworkUrl(songId: string): string {
+  return `${backendBaseUrl}/songs/${encodeURIComponent(songId)}/artwork`;
+}
 
 export interface BackendSong {
   id: string;
@@ -94,19 +100,18 @@ export interface CreateAnalysisOptions {
   force?: boolean;
 }
 
-async function requestJson<T>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${backendBaseUrl}${path}`, {
+    signal: AbortSignal.timeout(
+      init?.body instanceof FormData ? 300000 : 60000,
+    ),
     ...init,
-    headers:
-      init?.body instanceof FormData
-        ? init.headers
-        : {
-            "Content-Type": "application/json",
-            ...init?.headers,
-          },
+    headers: {
+      ...(init?.body && !(init.body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : {}),
+      ...init?.headers,
+    },
   });
 
   if (!response.ok) {
@@ -127,6 +132,34 @@ export function checkBackendHealth(): Promise<{ status: string }> {
   return requestJson("/health");
 }
 
+export interface BackendCapabilities {
+  engines: Record<string, boolean>;
+  analysis_ready: boolean;
+  streaming: boolean;
+  managed_library: boolean;
+}
+export function getCapabilities(): Promise<BackendCapabilities> {
+  return requestJson("/capabilities");
+}
+export async function listSongs(): Promise<BackendSong[]> {
+  return (await requestJson<{ songs: BackendSong[] }>("/songs")).songs;
+}
+export function getSongTimeline(id: string): Promise<BackendTimeline> {
+  return requestJson(`/songs/${id}/timeline`);
+}
+export function songAudioUrl(id: string) {
+  return `${backendBaseUrl}/songs/${id}/audio`;
+}
+export function saveCorrections(
+  id: string,
+  corrections: { start: number; end: number; label: string }[],
+): Promise<BackendTimeline> {
+  return requestJson(`/songs/${id}/corrections`, {
+    method: "POST",
+    body: JSON.stringify({ corrections }),
+  });
+}
+
 export function uploadSong(file: File): Promise<BackendSong> {
   const formData = new FormData();
   formData.append("file", file);
@@ -134,6 +167,59 @@ export function uploadSong(file: File): Promise<BackendSong> {
   return requestJson("/songs/upload", {
     method: "POST",
     body: formData,
+  });
+}
+
+export function importSongPath(path: string): Promise<BackendSong> {
+  return requestJson("/songs/import", {
+    method: "POST",
+    body: JSON.stringify({ path }),
+  });
+}
+
+export interface GuitarPlan {
+  capo: number;
+  automatic: boolean;
+  easy_count: number;
+  total_count: number;
+  shape_labels: string[];
+  chords: {
+    chord: string;
+    shape: string;
+    easy: boolean;
+    family: string;
+    difficulty: number;
+  }[];
+}
+
+export function getGuitarPlan(
+  chords: ChordSegment[],
+  easyShapes: string[],
+  mode: string,
+  capo: number | null,
+  signal: AbortSignal,
+): Promise<GuitarPlan> {
+  const unique = new Map<string, number>();
+  chords
+    .filter((c) => c.root && c.label !== "N")
+    .forEach((c) =>
+      unique.set(
+        c.label,
+        (unique.get(c.label) ?? 0) + c.endSeconds - c.startSeconds,
+      ),
+    );
+  return requestJson("/guitar/plan", {
+    method: "POST",
+    signal,
+    body: JSON.stringify({
+      chords: [...unique].map(([label, duration]) => ({
+        label,
+        duration: Math.max(0.05, duration),
+      })),
+      easy_shapes: easyShapes,
+      mode,
+      capo,
+    }),
   });
 }
 
@@ -147,7 +233,8 @@ export function createAnalysisJob(
       song_id: songId,
       mode: options.mode,
       batch_seconds: options.mode === "batched" ? options.batchSeconds : null,
-      preview_seconds: options.mode === "preview" ? options.previewSeconds : null,
+      preview_seconds:
+        options.mode === "preview" ? options.previewSeconds : null,
       force: Boolean(options.force),
     }),
   });
@@ -157,10 +244,13 @@ export function getAnalysisJob(jobId: string): Promise<BackendJob> {
   return requestJson(`/analysis/jobs/${jobId}`);
 }
 
-export async function getAnalysisBatches(jobId: string): Promise<BackendBatch[]> {
-  const payload = await requestJson<{ job_id: string; batches: BackendBatch[] }>(
-    `/analysis/jobs/${jobId}/batches`,
-  );
+export async function getAnalysisBatches(
+  jobId: string,
+): Promise<BackendBatch[]> {
+  const payload = await requestJson<{
+    job_id: string;
+    batches: BackendBatch[];
+  }>(`/analysis/jobs/${jobId}/batches`);
   return payload.batches;
 }
 
@@ -168,10 +258,13 @@ export function getJobTimeline(jobId: string): Promise<BackendTimeline> {
   return requestJson(`/analysis/jobs/${jobId}/timeline`);
 }
 
-export async function getSongLyrics(songId: string): Promise<BackendLyrics | null> {
-  const payload = await requestJson<{ song_id: string; lyrics: BackendLyrics | null }>(
-    `/songs/${songId}/lyrics`,
-  );
+export async function getSongLyrics(
+  songId: string,
+): Promise<BackendLyrics | null> {
+  const payload = await requestJson<{
+    song_id: string;
+    lyrics: BackendLyrics | null;
+  }>(`/songs/${songId}/lyrics`);
   return payload.lyrics;
 }
 
@@ -216,7 +309,13 @@ export async function downloadSongLyrics(
   return payload.lyrics;
 }
 
-const toneRoles: ChordToneRole[] = ["root", "third", "fifth", "seventh", "extension"];
+const toneRoles: ChordToneRole[] = [
+  "root",
+  "third",
+  "fifth",
+  "seventh",
+  "extension",
+];
 
 function mapJobStatus(status: BackendJob["status"]): AnalysisStatus {
   if (status === "queued") {
@@ -248,7 +347,10 @@ function readableQuality(segment: BackendChordSegment): string {
   return "detected";
 }
 
-export function backendSegmentToChord(segment: BackendChordSegment, index: number): ChordSegment {
+export function backendSegmentToChord(
+  segment: BackendChordSegment,
+  index: number,
+): ChordSegment {
   const label = displayChordLabel(segment.label);
   const root = segment.root ?? parseRoot(label);
   return {
@@ -268,7 +370,9 @@ export function backendSegmentToChord(segment: BackendChordSegment, index: numbe
   };
 }
 
-export function buildWorkspaceFromTimeline(timeline: BackendTimeline): SongWorkspace {
+export function buildWorkspaceFromTimeline(
+  timeline: BackendTimeline,
+): SongWorkspace {
   const durationSeconds =
     timeline.song.duration ??
     Math.max(1, ...timeline.segments.map((segment) => segment.end));
@@ -282,7 +386,7 @@ export function buildWorkspaceFromTimeline(timeline: BackendTimeline): SongWorks
       sourceLabel: timeline.song.content_hash.slice(0, 12),
     },
     analysis: {
-      key: timeline.job.key_label ?? "Key pending",
+      key: timeline.job.key_label ?? "Key unavailable",
       tempoBpm: timeline.job.tempo_bpm,
       engine: timeline.job.engine,
       status: mapJobStatus(timeline.job.status),
@@ -327,7 +431,10 @@ export function buildWorkspaceFromBatches(
   };
 }
 
-export function buildEmptyBackendWorkspace(song: BackendSong, status: AnalysisStatus): SongWorkspace {
+export function buildEmptyBackendWorkspace(
+  song: BackendSong,
+  status: AnalysisStatus,
+): SongWorkspace {
   return {
     song: {
       id: song.id,

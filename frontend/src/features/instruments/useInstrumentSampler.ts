@@ -1,7 +1,11 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ChordSegment, InstrumentTab } from "../../types/music";
-import { midiForNote, normalizeNote, pitchClassForNote } from "../../utils/musicTheory";
+import {
+  midiForNote,
+  normalizeNote,
+  pitchClassForNote,
+} from "../../utils/musicTheory";
 
 export interface SampleNote {
   note: string;
@@ -100,7 +104,10 @@ const guitarSampleNames = [
   "guitar-gs5.flac",
 ];
 
-function decodeSampleName(fileName: string, instrument: InstrumentTab): SampleDefinition {
+function decodeSampleName(
+  fileName: string,
+  instrument: InstrumentTab,
+): SampleDefinition {
   const match = /^(?:piano|guitar)-([a-g]s?)(\d)\.(?:wav|flac)$/.exec(fileName);
   if (!match) {
     throw new Error(`Invalid sample file name: ${fileName}`);
@@ -123,18 +130,25 @@ const sampleBanks: Record<InstrumentTab, SampleDefinition[]> = {
 
 function createAudioContext(): AudioContext | null {
   const audioWindow = window as AudioWindow;
-  const AudioContextClass = audioWindow.AudioContext ?? audioWindow.webkitAudioContext;
+  const AudioContextClass =
+    audioWindow.AudioContext ?? audioWindow.webkitAudioContext;
   return AudioContextClass ? new AudioContextClass() : null;
 }
 
 function nearestSample(instrument: InstrumentTab, targetMidi: number) {
   const bank = sampleBanks[instrument];
   return bank.reduce((best, sample) =>
-    Math.abs(sample.midi - targetMidi) < Math.abs(best.midi - targetMidi) ? sample : best,
+    Math.abs(sample.midi - targetMidi) < Math.abs(best.midi - targetMidi)
+      ? sample
+      : best,
   );
 }
 
-function releaseVoices(context: AudioContext, voices: ActiveVoice[], releaseSeconds = 0.11) {
+function releaseVoices(
+  context: AudioContext,
+  voices: ActiveVoice[],
+  releaseSeconds = 0.11,
+) {
   const now = context.currentTime;
   voices.forEach((voice) => {
     try {
@@ -147,7 +161,11 @@ function releaseVoices(context: AudioContext, voices: ActiveVoice[], releaseSeco
   });
 }
 
-function targetGain(instrument: InstrumentTab, noteCount: number, explicitGain?: number) {
+function targetGain(
+  instrument: InstrumentTab,
+  noteCount: number,
+  explicitGain?: number,
+) {
   if (explicitGain !== undefined) {
     return explicitGain;
   }
@@ -169,7 +187,10 @@ export function notesForPianoChord(chord: ChordSegment): SampleNote[] {
   }
 
   const rootPc = pitchClassForNote(chord.root);
-  const rootOctave = rootPc >= pitchClassForNote("C") && rootPc <= pitchClassForNote("B") ? 3 : 4;
+  const rootOctave =
+    rootPc >= pitchClassForNote("C") && rootPc <= pitchClassForNote("B")
+      ? 3
+      : 4;
   let previousMidi = midiForNote(chord.root, rootOctave) - 1;
 
   return chord.tones.slice(0, 5).map((tone) => {
@@ -197,6 +218,28 @@ export function useInstrumentSampler(enabled: boolean) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const bufferCacheRef = useRef(new Map<string, Promise<AudioBuffer>>());
   const activeChordVoicesRef = useRef<ActiveVoice[]>([]);
+  const generation = useRef(0);
+  const mounted = useRef(true);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+      activeChordVoicesRef.current.forEach(({ source, gain }) => {
+        try {
+          source.stop();
+          source.disconnect();
+          gain.disconnect();
+        } catch {}
+      });
+      activeChordVoicesRef.current = [];
+      const context = audioContextRef.current;
+      audioContextRef.current = null;
+      bufferCacheRef.current.clear();
+      if (context) void context.close();
+    };
+  }, []);
 
   const getContext = useCallback(() => {
     const context = audioContextRef.current ?? createAudioContext();
@@ -206,23 +249,26 @@ export function useInstrumentSampler(enabled: boolean) {
     return context;
   }, []);
 
-  const loadSample = useCallback(async (context: AudioContext, sample: SampleDefinition) => {
-    const existing = bufferCacheRef.current.get(sample.url);
-    if (existing) {
-      return existing;
-    }
+  const loadSample = useCallback(
+    async (context: AudioContext, sample: SampleDefinition) => {
+      const existing = bufferCacheRef.current.get(sample.url);
+      if (existing) {
+        return existing;
+      }
 
-    const promise = fetch(sample.url)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Could not load sample ${sample.url}`);
-        }
-        return response.arrayBuffer();
-      })
-      .then((arrayBuffer) => context.decodeAudioData(arrayBuffer.slice(0)));
-    bufferCacheRef.current.set(sample.url, promise);
-    return promise;
-  }, []);
+      const promise = fetch(sample.url)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Could not load sample ${sample.url}`);
+          }
+          return response.arrayBuffer();
+        })
+        .then((arrayBuffer) => context.decodeAudioData(arrayBuffer.slice(0)));
+      bufferCacheRef.current.set(sample.url, promise);
+      return promise;
+    },
+    [],
+  );
 
   const releaseActiveChord = useCallback((releaseSeconds = 0.11) => {
     const context = audioContextRef.current;
@@ -239,7 +285,11 @@ export function useInstrumentSampler(enabled: boolean) {
     async (
       instrument: InstrumentTab,
       notes: SampleNote[],
-      options: { hold?: boolean; durationSeconds?: number; releasePrevious?: boolean } = {},
+      options: {
+        hold?: boolean;
+        durationSeconds?: number;
+        releasePrevious?: boolean;
+      } = {},
     ) => {
       if (!enabled || notes.length === 0) {
         return;
@@ -259,26 +309,42 @@ export function useInstrumentSampler(enabled: boolean) {
       }
 
       const now = context.currentTime;
+      const requestGeneration = generation.current;
       const voices = await Promise.all(
         notes.map(async (note, index) => {
           const targetMidi = midiForNote(note.note, note.octave);
           const sample = nearestSample(instrument, targetMidi);
           const buffer = await loadSample(context, sample);
+          if (
+            requestGeneration !== generation.current ||
+            context.state === "closed"
+          )
+            return null;
           const source = context.createBufferSource();
           const gain = context.createGain();
-          const startAt = now + (note.delaySeconds ?? (instrument === "guitar" ? index * 0.018 : index * 0.006));
+          const startAt =
+            now +
+            (note.delaySeconds ??
+              (instrument === "guitar" ? index * 0.018 : index * 0.006));
           const attack = instrument === "guitar" ? 0.006 : 0.012;
 
           source.buffer = buffer;
-          source.playbackRate.setValueAtTime(2 ** ((targetMidi - sample.midi) / 12), startAt);
+          source.playbackRate.setValueAtTime(
+            2 ** ((targetMidi - sample.midi) / 12),
+            startAt,
+          );
           gain.gain.setValueAtTime(0.0001, startAt);
-          gain.gain.exponentialRampToValueAtTime(targetGain(instrument, notes.length, note.gain), startAt + attack);
+          gain.gain.exponentialRampToValueAtTime(
+            targetGain(instrument, notes.length, note.gain),
+            startAt + attack,
+          );
           source.connect(gain);
           gain.connect(context.destination);
           source.start(startAt);
 
           if (!options.hold) {
-            const duration = options.durationSeconds ?? (instrument === "guitar" ? 1.7 : 1.3);
+            const duration =
+              options.durationSeconds ?? (instrument === "guitar" ? 1.7 : 1.3);
             gain.gain.setTargetAtTime(0.0001, startAt + duration, 0.08);
             source.stop(startAt + duration + 0.45);
           }
@@ -288,22 +354,40 @@ export function useInstrumentSampler(enabled: boolean) {
       );
 
       if (options.hold) {
-        activeChordVoicesRef.current = voices;
+        activeChordVoicesRef.current = voices.filter(
+          (voice): voice is ActiveVoice => voice !== null,
+        );
       }
     },
     [enabled, getContext, loadSample, releaseActiveChord],
   );
 
   const playNote = useCallback(
-    (instrument: InstrumentTab, note: string, octave = 4, durationSeconds = 0.9) => {
-      void playNotes(instrument, [{ note: normalizeNote(note), octave }], { durationSeconds });
+    (
+      instrument: InstrumentTab,
+      note: string,
+      octave = 4,
+      durationSeconds = 0.9,
+    ) => {
+      setError(null);
+      void playNotes(instrument, [{ note: normalizeNote(note), octave }], {
+        durationSeconds,
+      }).catch((error) => {
+        if (mounted.current) setError(String(error));
+      });
     },
     [playNotes],
   );
 
   const playChord = useCallback(
     (instrument: InstrumentTab, notes: SampleNote[]) => {
-      void playNotes(instrument, notes, { hold: true, releasePrevious: true });
+      setError(null);
+      void playNotes(instrument, notes, {
+        hold: true,
+        releasePrevious: true,
+      }).catch((error) => {
+        if (mounted.current) setError(String(error));
+      });
     },
     [playNotes],
   );
@@ -313,7 +397,8 @@ export function useInstrumentSampler(enabled: boolean) {
       playNote,
       playChord,
       releaseActiveChord,
+      error,
     }),
-    [playChord, playNote, releaseActiveChord],
+    [playChord, playNote, releaseActiveChord, error],
   );
 }

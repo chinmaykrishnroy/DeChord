@@ -1,0 +1,5 @@
+# Optional large-vocabulary inference stack. Install separately from the API runtime.
+lv-chordia>=1,<2
+# madmom is an optional alternative and supplies the current key/tempo adapters.
+# Install its maintained source distribution in a compatible Python environment:
+# python -m pip install git+https://github.com/CPJKU/madmom

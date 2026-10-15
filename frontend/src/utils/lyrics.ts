@@ -68,6 +68,11 @@ export function parseLyrics(text: string, source: LyricsState["source"]): Lyrics
     });
   });
 
+  const offsetTag = text.match(/\[offset:\s*(-?\d+)\]/i);
+  const offsetSeconds = offsetTag ? Number(offsetTag[1]) / 1000 : 0;
+  for (const line of lines) if (line.timeSeconds !== null) line.timeSeconds = Math.max(0, line.timeSeconds + offsetSeconds);
+  lines.sort((a,b) => (a.timeSeconds ?? Infinity) - (b.timeSeconds ?? Infinity));
+
   return {
     status: lines.length > 0 ? "ready" : "empty",
     source,

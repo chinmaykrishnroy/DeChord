@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import re
-import shutil
 import time
 import uuid
+import threading
+import math
+from backend.core.media import MediaError
 from dataclasses import replace
 from pathlib import Path
 from typing import BinaryIO
@@ -49,22 +51,46 @@ class AnalysisService:
         self.chord_engine = chord_engine or LvChordiaEngine(config=self.config, media_tools=self.media_tools)
         self.key_engine = key_engine or MadmomKeyEngine()
         self.tempo_engine = tempo_engine or MadmomTempoEngine()
+        self._job_lock = threading.RLock()
 
     def import_song(self, path: str, title: str | None = None) -> Song:
         audio_path = Path(path).expanduser()
-        if not audio_path.exists():
+        if not audio_path.is_file():
             raise FileNotFoundError(str(audio_path))
 
         duration = self.media_tools.probe_duration(audio_path)
+        if duration is None or not math.isfinite(duration) or duration <= 0:
+            raise MediaError("This file has no readable audio duration. Try a supported WAV, MP3, FLAC or M4A file.")
         content_hash = audio_content_hash(str(audio_path), engine_id="dechord-song-v1")
         return self.repository.save_song(str(audio_path), content_hash, duration, title=title)
 
     def import_uploaded_song(self, filename: str, file_obj: BinaryIO) -> Song:
         safe_name = self._safe_upload_name(filename)
         destination = self.config.upload_dir / f"{uuid.uuid4().hex}-{safe_name}"
-        with destination.open("wb") as output:
-            shutil.copyfileobj(file_obj, output)
-        return self.import_song(str(destination), title=Path(filename or safe_name).stem)
+        try:
+            with destination.open("wb") as output:
+                copied = 0
+                while True:
+                    chunk = file_obj.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    copied += len(chunk)
+                    if copied > self.config.max_upload_bytes:
+                        raise ValueError("Audio exceeds the 512 MB import limit.")
+                    output.write(chunk)
+            song = self.import_song(str(destination), title=Path(filename or safe_name).stem)
+            # A single retained managed file per content hash, also usable after restart.
+            stable = self.config.upload_dir / f"{song.content_hash}{destination.suffix.lower()}"
+            if stable != destination:
+                if stable.exists():
+                    destination.unlink()
+                else:
+                    destination.replace(stable)
+                song = self.repository.save_song(str(stable), song.content_hash, song.duration, title=song.title)
+            return song
+        except Exception:
+            destination.unlink(missing_ok=True)
+            raise
 
     def create_analysis_job(
         self,
@@ -111,16 +137,7 @@ class AnalysisService:
                 if not run_immediately:
                     return resumable
                 return self._run_job(song, resumable)
-        else:
-            self.repository.delete_jobs_for_signature(
-                song_id=song_id,
-                mode=mode,
-                engine=self.chord_engine.engine_id,
-                dictionary=self.config.default_dictionary,
-                batch_seconds=normalized_batch_seconds,
-                preview_seconds=normalized_preview_seconds,
-            )
-
+        # A forced replacement keeps the last successful job available.
         job = self.repository.create_job(
             song_id=song_id,
             mode=mode,
@@ -135,9 +152,15 @@ class AnalysisService:
         return self._run_job(song, job)
 
     def run_job(self, job_id: str) -> AnalysisJob:
+        with self._job_lock:
+            return self._run_queued_job(job_id)
+
+    def _run_queued_job(self, job_id: str) -> AnalysisJob:
         job = self.repository.get_job(job_id)
         if job is None:
             raise KeyError(f"Job not found: {job_id}")
+        if job.status == "completed":
+            return job
         song = self._require_song(job.song_id)
         return self._run_job(song, job)
 
@@ -171,7 +194,7 @@ class AnalysisService:
     def save_corrections(self, song_id: str, corrections: list[Correction]) -> Timeline:
         self._require_song(song_id)
         for correction in corrections:
-            if correction.start < 0 or correction.end <= correction.start:
+            if not math.isfinite(correction.start) or not math.isfinite(correction.end) or correction.start < 0 or correction.end <= correction.start:
                 raise ValueError("Corrections must use non-negative times with end greater than start.")
         normalized = [
             build_chord_segment(
@@ -406,11 +429,16 @@ class AnalysisService:
 
         corrected = list(segments)
         for correction in corrections:
-            corrected = [
-                segment
-                for segment in corrected
-                if segment.end <= correction.start or segment.start >= correction.end
-            ]
+            remaining = []
+            for segment in corrected:
+                if segment.end <= correction.start or segment.start >= correction.end:
+                    remaining.append(segment)
+                    continue
+                if segment.start < correction.start:
+                    remaining.append(replace(segment, end=correction.start))
+                if segment.end > correction.end:
+                    remaining.append(replace(segment, start=correction.end))
+            corrected = remaining
             corrected.append(
                 build_chord_segment(
                     correction.start,
@@ -447,9 +475,6 @@ class AnalysisService:
         )
 
     def _cleanup_uploaded_media(self, song: Song) -> None:
-        audio_path = Path(song.path)
-        try:
-            audio_path.relative_to(self.config.upload_dir)
-        except ValueError:
-            return
-        audio_path.unlink(missing_ok=True)
+        # Managed sources are library data, not transient analysis files.
+        # Extracted WAV pieces are cleaned by the engine adapter separately.
+        return

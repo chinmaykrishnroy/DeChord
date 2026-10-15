@@ -7,14 +7,20 @@ interface PianoPageProps {
   onNotePreview: (note: string, octave?: number) => void;
 }
 
-export function PianoPage({ currentChord, soundEnabled, onNotePreview }: PianoPageProps) {
+export function PianoPage({
+  currentChord,
+  soundEnabled,
+  onNotePreview,
+}: PianoPageProps) {
   return (
     <section className="instrument-page piano-page">
       <div className="instrument-toolbar">
         <div>
           <span>Piano</span>
-          <strong>Root position</strong>
-          <small>Highlighted keys show the current chord tones.</small>
+          <strong>
+            {currentChord.label === "N" ? "No chord" : currentChord.label}
+          </strong>
+          <small>All detected chord tones</small>
         </div>
         <div className="capo-pill">Chord tones</div>
       </div>
@@ -24,6 +30,13 @@ export function PianoPage({ currentChord, soundEnabled, onNotePreview }: PianoPa
         onNotePreview={onNotePreview}
         soundEnabled={soundEnabled}
       />
+      <div className="piano-page__legend">
+        {currentChord.tones.map((tone) => (
+          <span key={tone.note}>
+            {tone.note} · {tone.role}
+          </span>
+        ))}
+      </div>
     </section>
   );
 }

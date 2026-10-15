@@ -2,20 +2,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND_ROOT.parent
+DATA_ROOT = Path(os.environ.get("DECHORD_DATA_DIR", str(PROJECT_ROOT / "cache" / "backend"))).expanduser()
 
 
 @dataclass(frozen=True)
 class BackendConfig:
     """Runtime settings for the local analysis service."""
 
-    database_path: Path = PROJECT_ROOT / "cache" / "backend" / "dechord_backend.sqlite3"
-    work_dir: Path = PROJECT_ROOT / "cache" / "backend" / "work"
-    upload_dir: Path = PROJECT_ROOT / "cache" / "backend" / "uploads"
-    default_engine: str = "lv-chordia"
+    database_path: Path = DATA_ROOT / "dechord_backend.sqlite3"
+    work_dir: Path = DATA_ROOT / "work"
+    upload_dir: Path = DATA_ROOT / "uploads"
+    default_engine: str = os.environ.get("DECHORD_CHORD_ENGINE", "auto")
+    max_upload_bytes: int = 512 * 1024 * 1024
     default_dictionary: str = "submission"
     default_batch_seconds: float = 30.0
     default_preview_seconds: float = 30.0

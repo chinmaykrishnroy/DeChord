@@ -1,0 +1,1103 @@
+/* Compact studio workspace. The two bottom lanes own their height in the shell. */
+.piano-whites {
+  display: flex;
+  height: 100%;
+  gap: 2px;
+}
+.piano-whites > .piano-key {
+  flex: 1;
+  min-width: 0;
+}
+.piano-keyboard[role="group"] {
+  position: relative;
+  min-height: 70px;
+  flex: 1;
+  border-top: 4px solid #28332c;
+}
+.piano-keyboard button.piano-key {
+  padding: 0 0 5px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 0 0 4px 4px;
+  border: 1px solid #8a948c;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.piano-keyboard button.piano-key:active {
+  transform: none;
+  filter: brightness(0.8);
+}
+.piano-keyboard .piano-key--white {
+  height: 100%;
+  background: #ebece6;
+  color: #26362b;
+}
+.piano-keyboard .piano-key--black {
+  position: absolute;
+  top: 0;
+  height: 62%;
+  transform: translateX(-50%);
+  z-index: 1;
+  background: #101712;
+  color: #dce6df;
+  border-color: #5c7062;
+}
+.piano-keyboard .piano-key--black:active {
+  transform: translateX(-50%);
+}
+.piano-keyboard .piano-key span {
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.piano-keyboard .piano-key small {
+  font-size: 8px;
+  margin-left: 1px;
+  color: inherit;
+  opacity: 0.7;
+}
+.piano-keyboard button.piano-key--root {
+  background: #47cf7d;
+  color: #0c301a;
+  border-color: #b4ffd1;
+}
+.piano-keyboard button.piano-key--third,
+.piano-keyboard button.piano-key--fifth {
+  background: #b0d3ba;
+  color: #1d3c29;
+  border-color: #dcf0e2;
+}
+.piano-keyboard button.piano-key--seventh,
+.piano-keyboard button.piano-key--extension {
+  background: #88b5bb;
+  color: #163a3e;
+  border-color: #d3eef1;
+}
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.studio-app {
+  height: 100dvh;
+  padding: 6px 6px 0;
+  gap: 0;
+  background: #0b0d0c;
+}
+.studio-body {
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 6px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.studio-main {
+  border-radius: 7px;
+  contain: paint;
+}
+.studio-sidebar {
+  padding: 16px 10px 12px;
+  border-radius: 7px;
+}
+.wordmark {
+  padding: 0 9px 18px;
+}
+.wordmark strong {
+  font-size: 20px;
+}
+.wordmark strong span {
+  font-size: 8px;
+}
+.studio-sidebar nav {
+  gap: 3px;
+}
+.studio-sidebar nav button,
+.sidebar-bottom > button {
+  padding: 10px;
+  font-size: 12px;
+  gap: 10px;
+}
+.sidebar-library {
+  margin-top: 16px;
+  padding-top: 10px;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.sidebar-library > div {
+  position: sticky;
+  top: 0;
+  background: #101211;
+  z-index: 1;
+}
+.sidebar-bottom {
+  padding-top: 12px;
+  gap: 8px;
+}
+.sidebar-bottom > span {
+  display: none;
+}
+.library-mini {
+  padding: 7px 4px;
+  gap: 8px;
+}
+.library-mini strong {
+  max-width: 115px;
+}
+.studio-topbar {
+  padding: 8px 16px;
+  min-height: 46px;
+}
+.studio-topbar button {
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.main-scroll {
+  padding: 12px 16px 16px;
+  overflow-x: hidden;
+}
+.session-heading {
+  gap: 12px;
+  margin-bottom: 12px;
+  min-height: 60px;
+}
+.session-art {
+  width: 54px;
+  height: 54px;
+  border-radius: 5px;
+}
+.session-art > svg {
+  width: 28px;
+}
+.session-heading h1 {
+  font-size: clamp(18px, 1.8vw, 26px);
+  letter-spacing: -0.6px;
+  margin: 4px 0 5px;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
+.session-heading .eyebrow {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.session-heading p {
+  font-size: 10px;
+}
+.current-chord-chip {
+  gap: 3px;
+  min-width: 70px;
+}
+.current-chord-chip strong {
+  font-size: 28px;
+}
+.current-chord-chip > span,
+.current-chord-chip small {
+  font-size: 9px;
+}
+.demo-notice {
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  font-size: 10px;
+}
+.widget {
+  border-color: #303632;
+  border-radius: 7px;
+  background: #191e1b;
+  isolation: isolate;
+}
+.widget-header {
+  height: 32px;
+  padding: 0 12px;
+}
+.widget-header h2 {
+  font-size: 12px;
+}
+.widget-header .icon-button {
+  width: 24px;
+  height: 24px;
+}
+.widget--lyrics .widget-content {
+  overflow: hidden;
+}
+.widget-content {
+  overscroll-behavior: contain;
+}
+.widget--guitar .widget-content {
+  overflow: auto;
+}
+.widget-toolbar {
+  padding: 8px 12px 4px;
+  gap: 7px;
+}
+.segments {
+  border-radius: 5px;
+  padding: 2px;
+  gap: 2px;
+}
+.segments button {
+  border-radius: 3px;
+  padding: 5px 8px;
+  font-size: 10px;
+}
+.inline-field {
+  font-size: 10px;
+  gap: 5px;
+}
+.inline-field select {
+  padding: 4px 6px;
+  font-size: 10px;
+}
+.guitar-widget {
+  min-height: 0;
+}
+.guitar-widget > .empty-state {
+  min-height: 90px;
+  flex: 1;
+  padding: 12px;
+}
+.easy-shapes {
+  font-size: 10px;
+  margin: 2px 12px 5px;
+  color: #b4c4ba;
+  flex-shrink: 0;
+}
+.easy-shapes summary {
+  cursor: pointer;
+}
+.easy-shapes[open] {
+  padding: 7px;
+  background: #242d27;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow: auto;
+}
+.easy-shapes > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  margin: 10px 0;
+}
+.easy-shapes label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.easy-shapes input {
+  height: 12px;
+  width: 12px;
+}
+.easy-shapes p {
+  font-size: 10px;
+  line-height: 1.5;
+}
+.shape-summary {
+  padding: 0 12px;
+}
+.shape-summary strong {
+  font-size: 25px;
+}
+.shape-summary > div {
+  flex-wrap: wrap;
+  gap: 4px 9px;
+}
+.guitar-widget > .inline-error {
+  font-size: 10px;
+  margin: 3px 12px;
+  flex-shrink: 0;
+}
+.shape-footer {
+  margin: 0 12px;
+  padding: 4px 0;
+}
+.shape-footer > span {
+  font-size: 9px;
+}
+.fretboard-wrap {
+  padding: 0 10px;
+  min-height: 100px;
+}
+.fretboard-legend {
+  font-size: 8px;
+  gap: 6px;
+  padding-bottom: 5px;
+}
+.neck {
+  flex: 1;
+  width: 100%;
+  min-height: 85px;
+  max-height: 220px;
+}
+.neck--compact {
+  display: none;
+}
+.piano-page {
+  height: 100%;
+  min-height: 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.instrument-toolbar {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.instrument-toolbar > div:first-child {
+  flex-direction: row;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.instrument-toolbar span {
+  font-size: 10px;
+  color: #91a298;
+}
+.instrument-toolbar strong {
+  font-size: 16px;
+}
+.instrument-toolbar small {
+  font-size: 9px;
+}
+.capo-pill {
+  font-size: 10px;
+  color: #99b4a3;
+  white-space: nowrap;
+}
+.piano-keyboard {
+  width: 100%;
+  height: 100%;
+  min-height: 60px;
+  flex: 1;
+  display: block;
+}
+.piano-keyboard button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: -3px;
+  z-index: 2;
+}
+.piano-page__legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 9px;
+  color: #bac8be;
+}
+.piano-page__legend span:first-child {
+  color: #55df8a;
+}
+.practice-dock {
+  flex: 0 0 126px;
+  min-height: 0;
+  margin-top: 6px;
+  background: #141a16;
+  border: 1px solid #303b33;
+  border-radius: 6px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.practice-dock .practice-timeline {
+  height: 100%;
+  padding: 6px 12px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.timeline-toolbar {
+  min-height: 26px;
+  margin: 0;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.timeline-toolbar > span {
+  font-size: 11px;
+  color: #afc0b3;
+}
+.timeline-toolbar .icon-button {
+  height: 25px;
+  width: 25px;
+}
+.timeline-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #607b69 #172019;
+}
+.time-lane {
+  min-width: 100%;
+  height: 100%;
+  min-height: 68px;
+  touch-action: pan-y;
+}
+.time-ruler {
+  height: 19px;
+}
+.time-ruler span {
+  font-size: 10px;
+}
+.chord-lane {
+  inset: 23px 0 7px;
+}
+.time-chord {
+  font-size: 15px;
+  padding: 4px 9px;
+  min-height: 32px;
+  pointer-events: auto;
+  justify-content: flex-start;
+  border-radius: 4px;
+}
+.time-chord strong {
+  text-overflow: clip;
+}
+.time-chord:active {
+  transform: none;
+}
+.time-chord:hover {
+  background: #45654f;
+}
+.time-chord.is-current {
+  background: #55d989;
+  color: #102d1b;
+}
+.practice-dock .timeline-map {
+  display: none;
+}
+.transport-bar {
+  flex: 0 0 64px;
+  min-height: 64px;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #0b0f0c;
+}
+.transport-bar__cluster > .transport-bar__play {
+  width: 35px;
+  height: 35px;
+}
+.transport-bar__tools {
+  gap: 12px;
+}
+.transport-bar__time {
+  font-size: 11px;
+}
+.lyrics-widget {
+  background: linear-gradient(
+    160deg,
+    rgba(var(--lyrics-rgb, 34, 59, 46), 0.92),
+    rgba(var(--lyrics-rgb, 34, 59, 46), 0.35)
+  );
+  overflow: hidden;
+}
+.lyrics-options {
+  padding: 5px 12px;
+}
+.lyrics-search {
+  padding: 0 12px 6px;
+}
+.lyrics-lines {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  overflow-anchor: none;
+  gap: 18px;
+  padding-inline: 18px;
+  scroll-behavior: auto;
+}
+.lyrics-lines button {
+  color: #ffffff80;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+}
+.lyrics-lines button.is-active {
+  color: #fff;
+  text-shadow: 0 1px 8px #0004;
+}
+.lyrics-lines button:hover {
+  color: #ffffffd9;
+}
+.lyrics-bottom {
+  flex-shrink: 0;
+  padding: 7px 0;
+  margin: 0 12px;
+  border-color: #ffffff20;
+  color: #e2eae4;
+}
+.lyrics-page {
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+}
+.lyrics-page h1 {
+  font-size: 24px;
+  margin: 0 0 12px;
+}
+.lyrics-page .lyrics-widget {
+  min-height: 0;
+}
+.lyrics-page .lyrics-lines {
+  padding-inline: 6%;
+}
+.layout-editor {
+  padding: 12px;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.layout-editor span {
+  font-size: 10px;
+}
+@container (max-width:460px) {
+  .neck--wide {
+    display: block;
+  }
+  .neck--compact {
+    display: none;
+  }
+  .fretboard-legend span:nth-child(2) {
+    display: none;
+  }
+  .shape-summary {
+    padding: 0 12px;
+  }
+  .widget-toolbar {
+    gap: 5px;
+  }
+  .instrument-toolbar small {
+    display: none;
+  }
+}
+@media (max-width: 1000px) {
+  .studio-body {
+    grid-template-columns: 155px minmax(0, 1fr);
+  }
+  .studio-sidebar {
+    padding: 14px 7px 10px;
+  }
+  .library-mini strong {
+    max-width: 93px;
+  }
+  .shape-summary span {
+    font-size: 9px;
+  }
+  .transport-bar__volume {
+    display: none;
+  }
+  .transport-bar {
+    grid-template-columns: auto 32px minmax(60px, 1fr) 32px auto;
+  }
+  .transport-bar__tools {
+    gap: 6px;
+  }
+}
+@media (max-width: 760px) {
+  .studio-body {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 5px;
+  }
+  .studio-sidebar {
+    padding: 14px 2px 9px;
+  }
+  .studio-sidebar nav button,
+  .sidebar-bottom > button {
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+  }
+  .wordmark {
+    padding: 0 0 14px;
+  }
+  .studio-topbar {
+    padding: 7px 10px;
+    min-height: 42px;
+  }
+  .main-scroll {
+    padding: 10px;
+  }
+  .session-heading {
+    gap: 9px;
+    min-height: 54px;
+    margin-bottom: 10px;
+  }
+  .session-heading h1 {
+    font-size: 19px;
+  }
+  .session-art {
+    width: 42px;
+    height: 42px;
+  }
+  .current-chord-chip {
+    min-width: 55px;
+  }
+  .current-chord-chip strong {
+    font-size: 24px;
+  }
+  .practice-dock {
+    flex-basis: 116px;
+    margin-top: 5px;
+  }
+  .practice-dock .practice-timeline {
+    padding: 5px 8px;
+  }
+  .timeline-toolbar > span {
+    font-size: 10px;
+  }
+  .transport-bar {
+    flex-basis: 92px;
+    min-height: 92px;
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
+    padding: 5px 10px;
+    gap: 4px;
+  }
+  .transport-bar__cluster {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .transport-bar__tools {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .transport-bar__cluster > .transport-bar__play {
+    height: 28px;
+    width: 28px;
+    padding: 6px;
+  }
+  .transport-bar__tools .stepper-control > button {
+    height: 20px;
+    width: 22px;
+  }
+  .transport-bar__time {
+    font-size: 9px;
+  }
+}
+@media (max-height: 620px) and (min-width: 761px) {
+  .practice-dock {
+    flex-basis: 108px;
+  }
+  .transport-bar {
+    flex-basis: 56px;
+    min-height: 56px;
+  }
+  .session-heading {
+    min-height: 48px;
+  }
+  .session-art {
+    height: 42px;
+    width: 42px;
+  }
+}
+/* Shell chrome must never expose a logo's source-image dimensions. */
+:root {
+  --first-color: var(--accent);
+}
+.app-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.brand-mark {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sidebar-brand-icon {
+  display: block;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  overflow: hidden;
+}
+.titlebar {
+  overflow: hidden;
+}
+.titlebar,
+.studio-sidebar,
+.studio-topbar,
+.practice-dock,
+.transport-bar {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.transport-value {
+  width: 64px;
+  text-align: center;
+  padding: 4px 2px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: #dce9e0;
+  font-size: 11px;
+}
+.transport-value:hover {
+  background: #26352b;
+}
+.transport-value:focus {
+  border-color: var(--accent);
+  background: #202c24;
+  outline: none;
+}
+.stepper-control[aria-label="Transpose control"] .transport-value {
+  width: 44px;
+}
+.practice-dock {
+  flex-basis: clamp(82px, 11dvh, 104px);
+}
+.practice-dock .practice-timeline {
+  padding: 4px 10px;
+  gap: 2px;
+}
+.timeline-toolbar {
+  min-height: 22px;
+  height: 22px;
+}
+.timeline-toolbar > span {
+  font-size: 10px;
+}
+.timeline-toolbar .icon-button {
+  height: 22px;
+  width: 22px;
+}
+.timeline-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.timeline-scroll {
+  height: 100%;
+  min-height: 0;
+}
+.time-lane {
+  min-height: 0;
+}
+.time-ruler {
+  height: 16px;
+}
+.chord-lane {
+  inset: 19px 0 5px;
+}
+.time-chord {
+  min-height: 25px;
+  font-size: 14px;
+  padding: 2px 8px;
+}
+.time-playhead {
+  top: 13px;
+  bottom: 4px;
+}
+.time-playhead--fixed {
+  z-index: 3;
+}
+.timeline-zoom {
+  width: 51px;
+  padding: 2px;
+  font-size: 10px;
+  border: 0;
+  background: transparent;
+}
+.lyrics-widget,
+.lyrics-page .lyrics-widget {
+  color: var(--lyrics-fg);
+  background:
+    radial-gradient(
+      circle at 18% 8%,
+      color-mix(in srgb, var(--lyrics-accent) 34%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--lyrics-bg) 92%, black),
+      color-mix(in srgb, var(--lyrics-bg) 76%, #050607)
+    );
+}
+.lyrics-widget .lyrics-lines button {
+  color: var(--lyrics-muted);
+}
+.lyrics-widget .lyrics-lines button.is-active,
+.lyrics-widget .lyrics-lines button:disabled {
+  color: var(--lyrics-fg);
+}
+.lyrics-widget .lyrics-lines button:hover {
+  color: var(--lyrics-fg);
+}
+.lyrics-widget .lyrics-options label,
+.lyrics-widget .lyrics-search,
+.lyrics-widget .lyrics-bottom {
+  color: var(--lyrics-fg);
+}
+.lyrics-widget .lyrics-lines button.is-active {
+  text-shadow: none;
+}
+@media (max-width: 760px) {
+  .practice-dock {
+    flex-basis: 88px;
+  }
+  .transport-value {
+    font-size: 10px;
+    width: 60px;
+    padding: 2px;
+  }
+}
+@media (max-height: 620px) and (min-width: 761px) {
+  .practice-dock {
+    flex-basis: 82px;
+  }
+}
+.practice-dock .practice-timeline {
+  padding: 3px 10px;
+  min-height: 0;
+}
+.timeline-toolbar {
+  min-height: 20px;
+  height: 20px;
+}
+.timeline-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+.time-ruler {
+  height: 14px;
+}
+.chord-lane {
+  inset: 17px 0 3px;
+}
+.time-playhead {
+  top: 10px;
+  bottom: 2px;
+}
+
+/* Album-derived controls keep the same surface and ink as the lyric sheet. */
+.lyrics-widget .lyrics-bottom input {
+  background: transparent;
+  color: var(--lyrics-fg);
+  border: 1px solid color-mix(in srgb, var(--lyrics-fg) 45%, transparent);
+  font-weight: 650;
+  color-scheme: normal;
+}
+.lyrics-widget .lyrics-bottom input:focus-visible {
+  outline: 2px solid var(--lyrics-fg);
+  outline-offset: 2px;
+}
+.timeline-zoom {
+  color-scheme: dark;
+  color: #eef7f0;
+}
+.timeline-zoom option {
+  background: #212a24;
+  color: #eef7f0;
+}
+.piano-keyboard button.piano-key--chord {
+  box-shadow:
+    inset 0 0 0 2px #153c25,
+    inset 0 -5px 0 #153c25;
+  border-color: #102e1c;
+}
+.piano-keyboard button.piano-key--black.piano-key--chord {
+  box-shadow:
+    inset 0 0 0 2px #e4ffed,
+    inset 0 -5px 0 #173f28;
+}
+.piano-keyboard button.piano-key.is-pressed,
+.piano-keyboard button.piano-key:active {
+  background: #f8c969;
+  color: #211a09;
+  box-shadow:
+    inset 0 0 0 3px #4c3203,
+    inset 0 -7px 0 #4c3203;
+  filter: none;
+}
+.piano-keyboard .piano-key span {
+  font-weight: 750;
+}
+.guitar-widget .fretboard-wrap {
+  min-height: 0;
+  padding: 0 6px;
+}
+.guitar-widget .neck {
+  min-height: 0;
+  height: 0;
+  flex: 1 1 0;
+  max-height: none;
+}
+.guitar-widget .shape-summary {
+  padding-inline: 8px;
+}
+.guitar-widget .shape-summary strong {
+  font-size: 30px;
+}
+.guitar-widget .shape-summary .shape-footer {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.guitar-widget .shape-summary .shape-footer > span {
+  display: none;
+}
+.guitar-widget .neck-marker text {
+  font-size: 14px;
+  font-weight: 800;
+}
+.guitar-widget .fretboard-legend {
+  font-size: 9px;
+  padding-bottom: 2px;
+}
+.instrument-practice {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.instrument-practice-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.instrument-practice-heading h1 {
+  margin: 4px 0 7px;
+  font-size: 30px;
+}
+.instrument-practice-heading p,
+.instrument-practice-hint {
+  color: #b3c2b9;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.practice-song-count {
+  color: #92a79a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.instrument-sequence-widget {
+  border: 1px solid #344138;
+  border-radius: 8px;
+  background: #19211c;
+  padding: 8px;
+}
+.chord-triptych {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+}
+.sequence-chord {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border: 1px solid #39483e;
+  border-radius: 6px;
+  background: #121915;
+}
+.sequence-chord--current {
+  border-color: #4de089;
+  background: #1b3023;
+  box-shadow: inset 0 3px #4de089;
+}
+.sequence-chord > header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.sequence-chord > header > span {
+  color: #abbeb0;
+  font-size: 12px;
+}
+.sequence-chord--current > header > span {
+  color: #6bf1a2;
+}
+.sequence-chord > header > button {
+  padding: 0;
+  background: transparent;
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 750;
+  color: #f1f7f2;
+}
+.sequence-shape {
+  font-size: 13px;
+  margin: 10px 0 0;
+  color: #b6cabe;
+}
+.sequence-shape strong {
+  color: #e7f4ec;
+}
+.sequence-chord > .fretboard-wrap {
+  height: clamp(145px, 24dvh, 260px);
+  min-height: 145px;
+  flex: none;
+}
+.sequence-chord .fretboard-wrap--vertical .neck--wide {
+  display: none;
+}
+.sequence-chord .fretboard-wrap--vertical .neck--compact {
+  display: block;
+}
+.sequence-chord > small {
+  text-align: center;
+  color: #a2b7a9;
+  font-size: 11px;
+}
+.sequence-empty {
+  display: grid;
+  place-content: center;
+  min-height: 220px;
+  color: #a4b5aa;
+  text-align: center;
+}
+.sequence-chord .piano-keyboard {
+  flex: none;
+  height: clamp(130px, 25dvh, 230px);
+  margin-top: 28px;
+}
+.sequence-chord .piano-keyboard .piano-key span {
+  font-size: 12px;
+}
+.sequence-tones {
+  color: #d0e3d6;
+  font-size: 14px;
+  text-align: center;
+  margin: 16px 0 3px;
+}
+.instrument-practice-hint {
+  margin: 14px 2px;
+  max-width: 900px;
+}
+@media (max-width: 1050px) {
+  .chord-triptych {
+    gap: 7px;
+    padding: 6px;
+  }
+  .sequence-chord {
+    padding: 10px;
+  }
+  .sequence-chord .piano-keyboard .piano-key span {
+    font-size: 10px;
+  }
+}
+@media (max-width: 760px) {
+  .chord-triptych {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sequence-chord--current {
+    grid-row: 1;
+  }
+  .sequence-chord--next {
+    grid-row: 2;
+  }
+  .instrument-practice-heading {
+    align-items: flex-start;
+  }
+  .practice-song-count {
+    display: none;
+  }
+}

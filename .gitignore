@@ -11,3 +11,5 @@ frontend/dist/
 frontend/.vite/
 frontend/src-tauri/target/
 frontend/*.tsbuildinfo
+.audit-tmp/
+frontend/audit-current.json

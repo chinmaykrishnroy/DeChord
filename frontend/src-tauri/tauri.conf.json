@@ -15,8 +15,8 @@
         "title": "DeChord",
         "width": 1280,
         "height": 820,
-        "minWidth": 1040,
-        "minHeight": 680,
+        "minWidth": 760,
+        "minHeight": 560,
         "decorations": false,
         "resizable": true,
         "center": true
