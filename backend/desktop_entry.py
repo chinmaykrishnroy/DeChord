@@ -23,12 +23,6 @@ def main():
         from backend.core.integrity import verify_models
 
         verify_models(resource_root)
-        # On Windows, lazy torch import from the analysis thread can deadlock
-        # while its native extension imports NumPy under the DLL loader lock.
-        # Initialize the native runtimes in dependency order on the main thread.
-        for module in ("numpy", "torch", "lv_chordia"):
-            print(f"Initializing {module}", file=sys.stderr, flush=True)
-            importlib.import_module(module)
     if os.environ.get("DECHORD_DIAGNOSTICS") == "1":
         import faulthandler
 
@@ -38,6 +32,14 @@ def main():
     binary_dir = resource_root / "bin"
     if binary_dir.is_dir():
         os.environ["PATH"] = str(binary_dir) + os.pathsep + os.environ.get("PATH", "")
+    os.environ.setdefault("OMP_NUM_THREADS", "2")
+    if getattr(sys, "frozen", False):
+        # On Windows, lazy torch import from the analysis thread can deadlock
+        # while its native extension imports NumPy under the DLL loader lock.
+        # Initialize the native runtimes in dependency order on the main thread.
+        for module in ("numpy", "torch", "lv_chordia"):
+            print(f"Initializing {module}", file=sys.stderr, flush=True)
+            importlib.import_module(module)
     import uvicorn
     from backend.app.main import app
 
