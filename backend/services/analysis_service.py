@@ -47,8 +47,12 @@ class AnalysisService:
         self.config = config or BackendConfig()
         self.config.ensure_directories()
         self.media_tools = media_tools or MediaTools(self.config.work_dir)
-        self.repository = repository or AnalysisRepository(AnalysisDatabase(config=self.config))
-        self.chord_engine = chord_engine or LvChordiaEngine(config=self.config, media_tools=self.media_tools)
+        self.repository = repository or AnalysisRepository(
+            AnalysisDatabase(config=self.config)
+        )
+        self.chord_engine = chord_engine or LvChordiaEngine(
+            config=self.config, media_tools=self.media_tools
+        )
         self.key_engine = key_engine or MadmomKeyEngine()
         self.tempo_engine = tempo_engine or MadmomTempoEngine()
         self._job_lock = threading.RLock()
@@ -60,9 +64,13 @@ class AnalysisService:
 
         duration = self.media_tools.probe_duration(audio_path)
         if duration is None or not math.isfinite(duration) or duration <= 0:
-            raise MediaError("This file has no readable audio duration. Try a supported WAV, MP3, FLAC or M4A file.")
+            raise MediaError(
+                "This file has no readable audio duration. Try a supported WAV, MP3, FLAC or M4A file."
+            )
         content_hash = audio_content_hash(str(audio_path), engine_id="dechord-song-v1")
-        return self.repository.save_song(str(audio_path), content_hash, duration, title=title)
+        return self.repository.save_song(
+            str(audio_path), content_hash, duration, title=title
+        )
 
     def import_uploaded_song(self, filename: str, file_obj: BinaryIO) -> Song:
         safe_name = self._safe_upload_name(filename)
@@ -78,15 +86,22 @@ class AnalysisService:
                     if copied > self.config.max_upload_bytes:
                         raise ValueError("Audio exceeds the 512 MB import limit.")
                     output.write(chunk)
-            song = self.import_song(str(destination), title=Path(filename or safe_name).stem)
+            song = self.import_song(
+                str(destination), title=Path(filename or safe_name).stem
+            )
             # A single retained managed file per content hash, also usable after restart.
-            stable = self.config.upload_dir / f"{song.content_hash}{destination.suffix.lower()}"
+            stable = (
+                self.config.upload_dir
+                / f"{song.content_hash}{destination.suffix.lower()}"
+            )
             if stable != destination:
                 if stable.exists():
                     destination.unlink()
                 else:
                     destination.replace(stable)
-                song = self.repository.save_song(str(stable), song.content_hash, song.duration, title=song.title)
+                song = self.repository.save_song(
+                    str(stable), song.content_hash, song.duration, title=song.title
+                )
             return song
         except Exception:
             destination.unlink(missing_ok=True)
@@ -106,11 +121,17 @@ class AnalysisService:
             raise ValueError(f"Unsupported analysis mode: {mode}")
 
         song = self._require_song(song_id)
-        if mode == "batched" and song.duration is not None and batch_seconds is not None:
+        if (
+            mode == "batched"
+            and song.duration is not None
+            and batch_seconds is not None
+        ):
             if float(batch_seconds) >= song.duration:
                 mode = "full_song"
         normalized_batch_seconds = self._normalize_batch_seconds(mode, batch_seconds)
-        normalized_preview_seconds = self._normalize_preview_seconds(mode, preview_seconds)
+        normalized_preview_seconds = self._normalize_preview_seconds(
+            mode, preview_seconds
+        )
 
         if not force:
             cached = self.repository.find_completed_job(
@@ -187,15 +208,26 @@ class AnalysisService:
 
     def _timeline_for_job(self, song: Song, job: AnalysisJob) -> Timeline:
         raw_segments = self.repository.list_segments(job.id)
-        corrected_segments = self._apply_corrections(raw_segments, self.repository.list_corrections(song.id))
+        corrected_segments = self._apply_corrections(
+            raw_segments, self.repository.list_corrections(song.id)
+        )
         batches = self.repository.list_batches(job.id, include_segments=False)
-        return Timeline(song=song, job=job, segments=corrected_segments, batches=batches)
+        return Timeline(
+            song=song, job=job, segments=corrected_segments, batches=batches
+        )
 
     def save_corrections(self, song_id: str, corrections: list[Correction]) -> Timeline:
         self._require_song(song_id)
         for correction in corrections:
-            if not math.isfinite(correction.start) or not math.isfinite(correction.end) or correction.start < 0 or correction.end <= correction.start:
-                raise ValueError("Corrections must use non-negative times with end greater than start.")
+            if (
+                not math.isfinite(correction.start)
+                or not math.isfinite(correction.end)
+                or correction.start < 0
+                or correction.end <= correction.start
+            ):
+                raise ValueError(
+                    "Corrections must use non-negative times with end greater than start."
+                )
         normalized = [
             build_chord_segment(
                 correction.start,
@@ -206,7 +238,10 @@ class AnalysisService:
             )
             for correction in corrections
         ]
-        saved = [Correction(segment.start, segment.end, segment.label) for segment in normalized]
+        saved = [
+            Correction(segment.start, segment.end, segment.label)
+            for segment in normalized
+        ]
         self.repository.replace_corrections(song_id, saved)
         return self.get_timeline(song_id)
 
@@ -267,7 +302,9 @@ class AnalysisService:
 
                 started_at = utc_now_iso()
                 monotonic_start = time.perf_counter()
-                batch = self._save_batch(job, batch_index, start, end, "running", 0.0, started_at=started_at)
+                batch = self._save_batch(
+                    job, batch_index, start, end, "running", 0.0, started_at=started_at
+                )
                 segments = self._recognize_window(song, job, start, end)
                 elapsed_seconds = round(time.perf_counter() - monotonic_start, 3)
                 completed_at = utc_now_iso()
@@ -298,16 +335,24 @@ class AnalysisService:
             self._cleanup_uploaded_media(song)
             return completed_job
         except Exception as exc:
-            return self.repository.update_job(job.id, status="failed", progress=1.0, error=str(exc))
+            return self.repository.update_job(
+                job.id, status="failed", progress=1.0, error=str(exc)
+            )
 
-    def _analysis_windows(self, song: Song, job: AnalysisJob) -> list[tuple[float, float | None]]:
+    def _analysis_windows(
+        self, song: Song, job: AnalysisJob
+    ) -> list[tuple[float, float | None]]:
         duration = song.duration
         if job.mode in {"full_song", "practice"}:
             return [(0.0, duration)]
 
         if job.mode == "preview":
             preview_seconds = job.preview_seconds or self.config.default_preview_seconds
-            end = min(preview_seconds, duration) if duration is not None else preview_seconds
+            end = (
+                min(preview_seconds, duration)
+                if duration is not None
+                else preview_seconds
+            )
             return [(0.0, end)]
 
         if job.mode == "batched":
@@ -324,7 +369,9 @@ class AnalysisService:
 
         raise ValueError(f"Unsupported analysis mode: {job.mode}")
 
-    def _recognize_window(self, song: Song, job: AnalysisJob, start: float, end: float | None) -> list[ChordSegment]:
+    def _recognize_window(
+        self, song: Song, job: AnalysisJob, start: float, end: float | None
+    ) -> list[ChordSegment]:
         if job.mode in {"full_song", "practice"} and start <= 0:
             return self.chord_engine.recognize(song.path)
         if start <= 0 and end is None:
@@ -370,7 +417,9 @@ class AnalysisService:
             )
         return trimmed
 
-    def _suppress_boundary_no_chord(self, segments: list[ChordSegment], window_start: float) -> list[ChordSegment]:
+    def _suppress_boundary_no_chord(
+        self, segments: list[ChordSegment], window_start: float
+    ) -> list[ChordSegment]:
         if len(segments) < 2:
             return segments
         first, second = segments[0], segments[1]
@@ -411,19 +460,31 @@ class AnalysisService:
         self.repository.save_batch(batch)
         return batch
 
-    def _normalize_batch_seconds(self, mode: str, batch_seconds: float | None) -> float | None:
+    def _normalize_batch_seconds(
+        self, mode: str, batch_seconds: float | None
+    ) -> float | None:
         if mode != "batched":
             return None
         value = batch_seconds or self.config.default_batch_seconds
-        return max(self.config.min_batch_seconds, min(self.config.max_batch_seconds, float(value)))
+        return max(
+            self.config.min_batch_seconds,
+            min(self.config.max_batch_seconds, float(value)),
+        )
 
-    def _normalize_preview_seconds(self, mode: str, preview_seconds: float | None) -> float | None:
+    def _normalize_preview_seconds(
+        self, mode: str, preview_seconds: float | None
+    ) -> float | None:
         if mode != "preview":
             return None
         value = preview_seconds or self.config.default_preview_seconds
-        return max(self.config.min_batch_seconds, min(self.config.max_batch_seconds, float(value)))
+        return max(
+            self.config.min_batch_seconds,
+            min(self.config.max_batch_seconds, float(value)),
+        )
 
-    def _apply_corrections(self, segments: list[ChordSegment], corrections: list[Correction]) -> list[ChordSegment]:
+    def _apply_corrections(
+        self, segments: list[ChordSegment], corrections: list[Correction]
+    ) -> list[ChordSegment]:
         if not corrections:
             return segments
 

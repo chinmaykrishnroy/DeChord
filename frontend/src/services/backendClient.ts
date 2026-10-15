@@ -7,15 +7,27 @@ import type {
 } from "../types/music";
 import { buildTones, displayChordLabel } from "../utils/musicTheory";
 
-const DEFAULT_BACKEND_URL = import.meta.env.DEV
-  ? "/api"
-  : "http://127.0.0.1:8765";
+const DEFAULT_BACKEND_URL = import.meta.env.DEV ? "/api" : "";
 
-export const backendBaseUrl =
+export let backendBaseUrl =
   import.meta.env.VITE_DECHORD_BACKEND_URL ?? DEFAULT_BACKEND_URL;
+let engineToken = "";
+export function configureDesktopEngine(connection: {
+  url: string;
+  token: string;
+}) {
+  backendBaseUrl = connection.url;
+  engineToken = connection.token;
+}
+export function backendResourceUrl(path: string) {
+  const url = `${backendBaseUrl}${path}`;
+  return engineToken
+    ? `${url}${path.includes("?") ? "&" : "?"}token=${encodeURIComponent(engineToken)}`
+    : url;
+}
 
 export function songArtworkUrl(songId: string): string {
-  return `${backendBaseUrl}/songs/${encodeURIComponent(songId)}/artwork`;
+  return backendResourceUrl(`/songs/${encodeURIComponent(songId)}/artwork`);
 }
 
 export interface BackendSong {
@@ -107,6 +119,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     ),
     ...init,
     headers: {
+      ...(engineToken ? { Authorization: `Bearer ${engineToken}` } : {}),
       ...(init?.body && !(init.body instanceof FormData)
         ? { "Content-Type": "application/json" }
         : {}),
@@ -148,7 +161,7 @@ export function getSongTimeline(id: string): Promise<BackendTimeline> {
   return requestJson(`/songs/${id}/timeline`);
 }
 export function songAudioUrl(id: string) {
-  return `${backendBaseUrl}/songs/${id}/audio`;
+  return backendResourceUrl(`/songs/${id}/audio`);
 }
 export function saveCorrections(
   id: string,

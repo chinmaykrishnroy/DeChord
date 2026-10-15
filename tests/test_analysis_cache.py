@@ -27,7 +27,9 @@ class AnalysisCacheTest(unittest.TestCase):
                 audio_file.write(b"same content")
 
             first_path = cache_file_for_audio(audio_path, tmp_dir, engine_id="engine-a")
-            second_path = cache_file_for_audio(audio_path, tmp_dir, engine_id="engine-b")
+            second_path = cache_file_for_audio(
+                audio_path, tmp_dir, engine_id="engine-b"
+            )
 
             self.assertNotEqual(first_path, second_path)
 

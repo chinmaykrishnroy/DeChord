@@ -1,7 +1,7 @@
 {
   "name": "dechord-frontend",
   "version": "1.0.0",
-  "description": "Modern DeChord desktop frontend draft.",
+  "description": "DeChord music practice studio for desktop and web.",
   "private": true,
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -9,7 +9,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc -b --pretty false",
     "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
-    "format": "prettier --write src tests",
+    "format": "prettier --write src tests e2e playwright.config.ts",
+    "format:check": "prettier --check src tests e2e playwright.config.ts",
+    "test:e2e": "playwright test",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -23,6 +25,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "dependencies": {
     "@soundtouchjs/audio-worklet": "2.1.1",
     "@tauri-apps/api": "^2.11.0",
@@ -32,6 +37,7 @@
     "react-grid-layout": "^2.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tauri-apps/cli": "^2.11.2",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.15",

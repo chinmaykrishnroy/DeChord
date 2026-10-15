@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mockWorkspace } from "../../data/mockSong";
 import {
-  backendBaseUrl,
+  backendResourceUrl,
   buildEmptyBackendWorkspace,
   buildWorkspaceFromBatches,
   buildWorkspaceFromTimeline,
@@ -174,7 +174,7 @@ export function useBackendWorkspace() {
       try {
         await new Promise<void>((resolve, reject) => {
           const events = new EventSource(
-            `${backendBaseUrl}/analysis/jobs/${initial.id}/events`,
+            backendResourceUrl(`/analysis/jobs/${initial.id}/events`),
           );
           stream.current = events;
           stopStream.current = () => {

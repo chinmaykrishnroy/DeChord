@@ -4,7 +4,10 @@ export function getChordToneNotes(chord: ChordSegment): string {
   return chord.tones.map((tone) => tone.note).join(" ");
 }
 
-export function getChordToneByRole(chord: ChordSegment, role: ChordTone["role"]) {
+export function getChordToneByRole(
+  chord: ChordSegment,
+  role: ChordTone["role"],
+) {
   return chord.tones.find((tone) => tone.role === role);
 }
 

@@ -23,7 +23,9 @@ class ArtworkCacheTests(unittest.TestCase):
                 output.write_bytes(b"jpeg cover")
                 return True
 
-            with patch.object(covers.media, "extract_artwork", side_effect=extract) as extraction:
+            with patch.object(
+                covers.media, "extract_artwork", side_effect=extract
+            ) as extraction:
                 first = covers.thumbnail(str(source))
                 self.assertEqual(first.read_bytes(), b"jpeg cover")
                 self.assertEqual(covers.thumbnail(str(source)), first)
@@ -33,7 +35,9 @@ class ArtworkCacheTests(unittest.TestCase):
                 self.assertEqual(extraction.call_count, 2)
             # A fresh service can reuse the on-disk cover without invoking FFmpeg.
             with patch("backend.core.media.MediaTools.extract_artwork") as extraction:
-                self.assertIsNotNone(ArtworkService(root / "artwork").thumbnail(str(source)))
+                self.assertIsNotNone(
+                    ArtworkService(root / "artwork").thumbnail(str(source))
+                )
                 extraction.assert_not_called()
 
     def test_missing_artwork_is_cached_and_partial_files_removed(self):
@@ -47,7 +51,9 @@ class ArtworkCacheTests(unittest.TestCase):
                 output.write_bytes(b"partial")
                 return False
 
-            with patch.object(covers.media, "extract_artwork", side_effect=no_artwork) as extraction:
+            with patch.object(
+                covers.media, "extract_artwork", side_effect=no_artwork
+            ) as extraction:
                 self.assertIsNone(covers.thumbnail(str(source)))
                 self.assertIsNone(covers.thumbnail(str(source)))
                 self.assertEqual(extraction.call_count, 1)
@@ -69,7 +75,9 @@ class ArtworkApiTests(unittest.TestCase):
             return True
 
         try:
-            with patch("backend.core.media.MediaTools.extract_artwork", side_effect=extract) as extraction:
+            with patch(
+                "backend.core.media.MediaTools.extract_artwork", side_effect=extract
+            ) as extraction:
                 with TestClient(app) as client:
                     response = client.get(f"/songs/{song.id}/artwork")
                     self.assertEqual(response.status_code, 200)
@@ -77,7 +85,9 @@ class ArtworkApiTests(unittest.TestCase):
                     self.assertEqual(response.headers["content-type"], "image/jpeg")
                     self.assertIn("max-age", response.headers["cache-control"])
                     client.get(f"/songs/{song.id}/artwork")
-                    self.assertEqual(client.get("/songs/unknown/artwork").status_code, 404)
+                    self.assertEqual(
+                        client.get("/songs/unknown/artwork").status_code, 404
+                    )
                     self.assertEqual(extraction.call_count, 1)
         finally:
             router.analysis_queue.close()
@@ -88,8 +98,12 @@ class ArtworkApiTests(unittest.TestCase):
         app = FastAPI()
         app.include_router(router)
         try:
-            with patch("backend.core.media.MediaTools.extract_artwork", return_value=False):
+            with patch(
+                "backend.core.media.MediaTools.extract_artwork", return_value=False
+            ):
                 with TestClient(app) as client:
-                    self.assertEqual(client.get(f"/songs/{song.id}/artwork").status_code, 404)
+                    self.assertEqual(
+                        client.get(f"/songs/{song.id}/artwork").status_code, 404
+                    )
         finally:
             router.analysis_queue.close()

@@ -1,0 +1,17 @@
+.git
+.assessment
+.venv*
+venv
+cache
+export
+build
+dist
+**/__pycache__
+**/node_modules
+frontend/dist
+frontend/src-tauri/target
+frontend/src-tauri/resources
+.audit-tmp
+.github
+test-results
+playwright-report

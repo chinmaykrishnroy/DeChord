@@ -6,7 +6,14 @@ from pathlib import Path
 
 from backend.core.database import AnalysisDatabase
 from backend.core.time import utc_now_iso
-from backend.domain.models import AnalysisBatch, AnalysisJob, ChordSegment, Correction, Lyrics, Song
+from backend.domain.models import (
+    AnalysisBatch,
+    AnalysisJob,
+    ChordSegment,
+    Correction,
+    Lyrics,
+    Song,
+)
 from legacy_desktop.chord_types import normalize_chord_label
 
 
@@ -14,7 +21,13 @@ class AnalysisRepository:
     def __init__(self, database: AnalysisDatabase) -> None:
         self.database = database
 
-    def save_song(self, path: str, content_hash: str, duration: float | None, title: str | None = None) -> Song:
+    def save_song(
+        self,
+        path: str,
+        content_hash: str,
+        duration: float | None,
+        title: str | None = None,
+    ) -> Song:
         song_title = title or Path(path).stem
         song_id = content_hash[:16]
         now = utc_now_iso()
@@ -28,7 +41,11 @@ class AnalysisRepository:
                     "UPDATE songs SET path = ?, title = ?, duration = ? WHERE id = ?",
                     (path, song_title, duration, row["id"]),
                 )
-                return self._song_from_row(connection.execute("SELECT * FROM songs WHERE id = ?", (row["id"],)).fetchone())
+                return self._song_from_row(
+                    connection.execute(
+                        "SELECT * FROM songs WHERE id = ?", (row["id"],)
+                    ).fetchone()
+                )
 
             connection.execute(
                 """
@@ -37,16 +54,27 @@ class AnalysisRepository:
                 """,
                 (song_id, path, song_title, content_hash, duration, now),
             )
-            return self._song_from_row(connection.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone())
+            return self._song_from_row(
+                connection.execute(
+                    "SELECT * FROM songs WHERE id = ?", (song_id,)
+                ).fetchone()
+            )
 
     def get_song(self, song_id: str) -> Song | None:
         with self.database.connect() as connection:
-            row = connection.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM songs WHERE id = ?", (song_id,)
+            ).fetchone()
             return self._song_from_row(row) if row else None
 
     def list_songs(self) -> list[Song]:
         with self.database.connect() as connection:
-            return [self._song_from_row(row) for row in connection.execute("SELECT * FROM songs ORDER BY created_at DESC LIMIT 200").fetchall()]
+            return [
+                self._song_from_row(row)
+                for row in connection.execute(
+                    "SELECT * FROM songs ORDER BY created_at DESC LIMIT 200"
+                ).fetchall()
+            ]
 
     def create_job(
         self,
@@ -82,7 +110,11 @@ class AnalysisRepository:
                     now,
                 ),
             )
-            return self._job_from_row(connection.execute("SELECT * FROM analysis_jobs WHERE id = ?", (job_id,)).fetchone())
+            return self._job_from_row(
+                connection.execute(
+                    "SELECT * FROM analysis_jobs WHERE id = ?", (job_id,)
+                ).fetchone()
+            )
 
     def update_job(
         self,
@@ -116,11 +148,17 @@ class AnalysisRepository:
                     job_id,
                 ),
             )
-            return self._job_from_row(connection.execute("SELECT * FROM analysis_jobs WHERE id = ?", (job_id,)).fetchone())
+            return self._job_from_row(
+                connection.execute(
+                    "SELECT * FROM analysis_jobs WHERE id = ?", (job_id,)
+                ).fetchone()
+            )
 
     def get_job(self, job_id: str) -> AnalysisJob | None:
         with self.database.connect() as connection:
-            row = connection.execute("SELECT * FROM analysis_jobs WHERE id = ?", (job_id,)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM analysis_jobs WHERE id = ?", (job_id,)
+            ).fetchone()
             return self._job_from_row(row) if row else None
 
     def find_completed_job(
@@ -247,7 +285,9 @@ class AnalysisRepository:
                 ),
             )
 
-    def save_segments(self, job_id: str, batch_index: int, segments: list[ChordSegment]) -> None:
+    def save_segments(
+        self, job_id: str, batch_index: int, segments: list[ChordSegment]
+    ) -> None:
         with self.database.connect() as connection:
             connection.execute(
                 "DELETE FROM chord_segments WHERE job_id = ? AND batch_index = ?",
@@ -281,7 +321,13 @@ class AnalysisRepository:
                     ),
                 )
 
-    def list_batches(self, job_id: str, include_segments: bool = True, after_index: int = -1, completed_only: bool = False) -> list[AnalysisBatch]:
+    def list_batches(
+        self,
+        job_id: str,
+        include_segments: bool = True,
+        after_index: int = -1,
+        completed_only: bool = False,
+    ) -> list[AnalysisBatch]:
         with self.database.connect() as connection:
             batch_rows = connection.execute(
                 "SELECT * FROM analysis_batches WHERE job_id = ? AND batch_index > ? AND (? = 0 OR status = 'completed') ORDER BY batch_index",
@@ -294,7 +340,9 @@ class AnalysisRepository:
                     (job_id, after_index),
                 ).fetchall()
                 for row in segment_rows:
-                    segments_by_batch.setdefault(row["batch_index"], []).append(self._segment_from_row(row))
+                    segments_by_batch.setdefault(row["batch_index"], []).append(
+                        self._segment_from_row(row)
+                    )
 
             return [
                 self._batch_from_row(row, segments_by_batch.get(row["batch_index"], []))
@@ -317,20 +365,35 @@ class AnalysisRepository:
             ).fetchall()
             return {row["batch_index"] for row in rows}
 
-    def replace_corrections(self, song_id: str, corrections: list[Correction]) -> list[Correction]:
+    def replace_corrections(
+        self, song_id: str, corrections: list[Correction]
+    ) -> list[Correction]:
         now = utc_now_iso()
         with self.database.connect() as connection:
-            connection.execute("DELETE FROM chord_corrections WHERE song_id = ?", (song_id,))
+            connection.execute(
+                "DELETE FROM chord_corrections WHERE song_id = ?", (song_id,)
+            )
             for index, correction in enumerate(corrections):
                 connection.execute(
                     """
                     INSERT INTO chord_corrections(song_id, correction_index, start, end, label, created_at)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (song_id, index, correction.start, correction.end, normalize_chord_label(correction.label), now),
+                    (
+                        song_id,
+                        index,
+                        correction.start,
+                        correction.end,
+                        normalize_chord_label(correction.label),
+                        now,
+                    ),
                 )
         return [
-            Correction(start=correction.start, end=correction.end, label=normalize_chord_label(correction.label))
+            Correction(
+                start=correction.start,
+                end=correction.end,
+                label=normalize_chord_label(correction.label),
+            )
             for correction in corrections
         ]
 
@@ -341,7 +404,11 @@ class AnalysisRepository:
                 (song_id,),
             ).fetchall()
             return [
-                Correction(start=row["start"], end=row["end"], label=normalize_chord_label(row["label"]))
+                Correction(
+                    start=row["start"],
+                    end=row["end"],
+                    label=normalize_chord_label(row["label"]),
+                )
                 for row in rows
             ]
 
@@ -369,12 +436,16 @@ class AnalysisRepository:
                 """,
                 (song_id, lyrics_text, 1 if synced else 0, source, provider, now, now),
             )
-            row = connection.execute("SELECT * FROM song_lyrics WHERE song_id = ?", (song_id,)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM song_lyrics WHERE song_id = ?", (song_id,)
+            ).fetchone()
             return self._lyrics_from_row(row)
 
     def get_lyrics(self, song_id: str) -> Lyrics | None:
         with self.database.connect() as connection:
-            row = connection.execute("SELECT * FROM song_lyrics WHERE song_id = ?", (song_id,)).fetchone()
+            row = connection.execute(
+                "SELECT * FROM song_lyrics WHERE song_id = ?", (song_id,)
+            ).fetchone()
             return self._lyrics_from_row(row) if row else None
 
     def _song_from_row(self, row) -> Song:

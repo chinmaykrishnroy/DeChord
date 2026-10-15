@@ -1,12 +1,16 @@
 """One bounded inference lane per local backend process, with duplicate submission protection."""
+
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
+
 
 class AnalysisQueue:
     def __init__(self, service, capacity=8):
         self.service = service
         self.capacity = capacity
-        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dechord-analysis")
+        self.executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="dechord-analysis"
+        )
         self.pending = set()
         self.lock = Lock()
 

@@ -19,7 +19,8 @@ export type AnalysisStatus =
 
 export type AnalysisMode = "full_song" | "preview" | "batched" | "practice";
 
-export type ChordToneRole = "root" | "third" | "fifth" | "seventh" | "extension";
+export type ChordToneRole =
+  "root" | "third" | "fifth" | "seventh" | "extension";
 
 export type WorkspacePanel = "studio" | "lyrics" | "analysis" | "practice";
 

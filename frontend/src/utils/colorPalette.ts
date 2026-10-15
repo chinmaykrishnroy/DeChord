@@ -32,7 +32,12 @@ function rgb(red: number, green: number, blue: number) {
   return `rgb(${Math.round(clamp(red))} ${Math.round(clamp(green))} ${Math.round(clamp(blue))})`;
 }
 
-function lift(red: number, green: number, blue: number, amount: number): [number, number, number] {
+function lift(
+  red: number,
+  green: number,
+  blue: number,
+  amount: number,
+): [number, number, number] {
   return [
     red + (255 - red) * amount,
     green + (255 - green) * amount,
@@ -40,7 +45,12 @@ function lift(red: number, green: number, blue: number, amount: number): [number
   ];
 }
 
-function deepen(red: number, green: number, blue: number, amount: number): [number, number, number] {
+function deepen(
+  red: number,
+  green: number,
+  blue: number,
+  amount: number,
+): [number, number, number] {
   return [red * amount, green * amount, blue * amount];
 }
 
@@ -48,7 +58,9 @@ export function getFallbackLyricsPalette() {
   return fallbackPalette;
 }
 
-export async function extractLyricsPalette(imageUrl: string): Promise<LyricsPalette> {
+export async function extractLyricsPalette(
+  imageUrl: string,
+): Promise<LyricsPalette> {
   const image = new Image();
   image.decoding = "async";
   image.src = imageUrl;
@@ -90,17 +102,26 @@ export async function extractLyricsPalette(imageUrl: string): Promise<LyricsPale
   blue /= count;
 
   const isLight = luminance(red, green, blue) > 0.42;
-  const background = isLight ? deepen(red, green, blue, 0.72) : lift(red, green, blue, 0.08);
-  const accent = isLight ? deepen(red, green, blue, 0.45) : lift(red, green, blue, 0.42);
+  const background = isLight
+    ? deepen(red, green, blue, 0.72)
+    : lift(red, green, blue, 0.08);
+  const accent = isLight
+    ? deepen(red, green, blue, 0.45)
+    : lift(red, green, blue, 0.42);
   const foreground = luminance(...background) > 0.36 ? "#11130f" : "#fffaf2";
   const muted =
-    foreground === "#11130f" ? "rgba(17, 19, 15, 0.58)" : "rgba(255, 250, 242, 0.56)";
+    foreground === "#11130f"
+      ? "rgba(17, 19, 15, 0.58)"
+      : "rgba(255, 250, 242, 0.56)";
 
   return {
     background: rgb(...background),
     foreground,
     muted,
     accent: rgb(...accent),
-    shadow: foreground === "#11130f" ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.48)",
+    shadow:
+      foreground === "#11130f"
+        ? "rgba(255, 255, 255, 0.18)"
+        : "rgba(0, 0, 0, 0.48)",
   };
 }

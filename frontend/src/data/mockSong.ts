@@ -102,14 +102,16 @@ export const mockWorkspace: MockSongWorkspace = {
     chordCount: rawSegments.length,
     generatedAt: "preview data",
   },
-  chords: rawSegments.map(([label, quality, startSeconds, endSeconds], index) => ({
-    id: `segment-${index + 1}`,
-    label,
-    root: label.match(/^[A-G](?:#|b)?/)?.[0] ?? label,
-    quality,
-    startSeconds,
-    endSeconds,
-    tones: toneSets[label],
-  })),
+  chords: rawSegments.map(
+    ([label, quality, startSeconds, endSeconds], index) => ({
+      id: `segment-${index + 1}`,
+      label,
+      root: label.match(/^[A-G](?:#|b)?/)?.[0] ?? label,
+      quality,
+      startSeconds,
+      endSeconds,
+      tones: toneSets[label],
+    }),
+  ),
   recommendedVoicings,
 };

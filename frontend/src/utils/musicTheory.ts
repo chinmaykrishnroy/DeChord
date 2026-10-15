@@ -1,7 +1,33 @@
 import type { ChordSegment, ChordTone, ChordToneRole } from "../types/music";
 
-export const chromaticNotes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-export const flatNotes = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+export const chromaticNotes = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
+export const flatNotes = [
+  "C",
+  "Db",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "Gb",
+  "G",
+  "Ab",
+  "A",
+  "Bb",
+  "B",
+];
 
 const noteToPitchClass: Record<string, number> = {
   C: 0,
@@ -47,7 +73,11 @@ export function normalizeNote(note: string): string {
 }
 
 export function pitchClassForNote(note: string): number {
-  return noteToPitchClass[note.replace(/\d/g, "")] ?? noteToPitchClass[normalizeNote(note)] ?? 0;
+  return (
+    noteToPitchClass[note.replace(/\d/g, "")] ??
+    noteToPitchClass[normalizeNote(note)] ??
+    0
+  );
 }
 
 export function displayChordLabel(label: string): string {
@@ -89,11 +119,16 @@ export function transposeChordLabel(label: string, semitones: number): string {
 
   const root = transposeNote(match.groups.root, semitones);
   const suffix = match.groups.suffix ?? "";
-  const bass = match.groups.bass ? `/${transposeNote(match.groups.bass, semitones)}` : "";
+  const bass = match.groups.bass
+    ? `/${transposeNote(match.groups.bass, semitones)}`
+    : "";
   return `${root}${suffix}${bass}`;
 }
 
-export function transposeChordSegment(chord: ChordSegment, semitones: number): ChordSegment {
+export function transposeChordSegment(
+  chord: ChordSegment,
+  semitones: number,
+): ChordSegment {
   if (semitones === 0 || chord.label === "N") {
     return {
       ...chord,
@@ -124,7 +159,9 @@ export function intervalsForChord(chord: ChordSegment): number[] {
 
   const rootPc = pitchClassForNote(chord.root);
   if (chord.tones.length > 0) {
-    return chord.tones.map((tone) => (pitchClassForNote(tone.note) - rootPc + 12) % 12);
+    return chord.tones.map(
+      (tone) => (pitchClassForNote(tone.note) - rootPc + 12) % 12,
+    );
   }
 
   const suffix = chordSuffix(chord.label).toLowerCase();
@@ -135,7 +172,8 @@ export function intervalsForChord(chord: ChordSegment): number[] {
   if (suffix.includes("sus2")) return [0, 2, 7];
   if (suffix.includes("sus4") || suffix.startsWith("sus")) return [0, 5, 7];
   if (suffix === "5") return [0, 7];
-  if (suffix.startsWith("m") && !suffix.startsWith("maj")) return suffix.includes("7") ? [0, 3, 7, 10] : [0, 3, 7];
+  if (suffix.startsWith("m") && !suffix.startsWith("maj"))
+    return suffix.includes("7") ? [0, 3, 7, 10] : [0, 3, 7];
   if (suffix.includes("maj7")) return [0, 4, 7, 11];
   if (suffix.includes("7")) return [0, 4, 7, 10];
   if (suffix.includes("6")) return [0, 4, 7, 9];
@@ -144,10 +182,15 @@ export function intervalsForChord(chord: ChordSegment): number[] {
 
 export function chordPitchClasses(chord: ChordSegment): Set<number> {
   const rootPc = pitchClassForNote(chord.root);
-  return new Set(intervalsForChord(chord).map((interval) => (rootPc + interval) % 12));
+  return new Set(
+    intervalsForChord(chord).map((interval) => (rootPc + interval) % 12),
+  );
 }
 
-export function roleForPitchClass(note: string, chord: ChordSegment): ChordToneRole | undefined {
+export function roleForPitchClass(
+  note: string,
+  chord: ChordSegment,
+): ChordToneRole | undefined {
   const notePc = pitchClassForNote(note);
   const rootPc = pitchClassForNote(chord.root);
   const interval = (notePc - rootPc + 12) % 12;
@@ -159,9 +202,9 @@ export function roleForPitchClass(note: string, chord: ChordSegment): ChordToneR
 }
 
 export function toneRoleForIndex(index: number): ChordToneRole {
-  return (["root", "third", "fifth", "seventh", "extension"] as ChordToneRole[])[
-    Math.min(index, 4)
-  ];
+  return (
+    ["root", "third", "fifth", "seventh", "extension"] as ChordToneRole[]
+  )[Math.min(index, 4)];
 }
 
 export function buildTones(root: string, notes: string[]): ChordTone[] {

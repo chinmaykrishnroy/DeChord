@@ -60,4 +60,6 @@ The audio worklet is a build asset, with no runtime CDN dependency. Its source-r
 
 ## Remaining release work
 
-The local service deliberately has no multi-user account model. Before public hosting, add authentication, request/resource isolation, upload quotas, and a durable service queue. Before a standalone desktop installer, bundle and supervise the Python runtime/models and run clean-machine installer tests. Before accuracy claims, benchmark reference recordings and validate guitar ergonomics and audible playback with musicians on target devices.
+The packaged desktop process model, authenticated loopback connection, owned engine lifecycle and shared Docker distribution are described in [RELEASING.md](RELEASING.md). Its platform jobs exercise actual frozen/native artifacts; source checks alone do not establish binary readiness.
+
+The web service deliberately has no multi-user account model. Before public hosting, add authentication, request/resource isolation, upload quotas and a durable service queue. Packaged binary smoke tests do not replace clean-machine installer/update acceptance. Before accuracy claims, benchmark reference recordings and validate guitar ergonomics and audible playback with musicians on target devices.

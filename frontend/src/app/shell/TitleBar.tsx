@@ -35,10 +35,18 @@ export function TitleBar() {
       </div>
 
       <div className="window-controls">
-        <button aria-label="Minimize window" type="button" onClick={() => runWindowAction("minimize")}>
+        <button
+          aria-label="Minimize window"
+          type="button"
+          onClick={() => runWindowAction("minimize")}
+        >
           <Minus size={15} />
         </button>
-        <button aria-label="Maximize window" type="button" onClick={() => runWindowAction("maximize")}>
+        <button
+          aria-label="Maximize window"
+          type="button"
+          onClick={() => runWindowAction("maximize")}
+        >
           <Square size={13} />
         </button>
         <button

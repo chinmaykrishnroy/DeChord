@@ -7,8 +7,7 @@ import importlib.util
 class TempoEngine(Protocol):
     engine_id: str
 
-    def estimate(self, audio_path: str) -> float | None:
-        ...
+    def estimate(self, audio_path: str) -> float | None: ...
 
 
 class MadmomTempoEngine:
@@ -17,12 +16,17 @@ class MadmomTempoEngine:
     def __init__(self):
         self.beats = None
         self.tempo = None
-        self.engine_id = "madmom-tempo" if importlib.util.find_spec("madmom") else "librosa-onset-tempo"
+        self.engine_id = (
+            "madmom-tempo"
+            if importlib.util.find_spec("madmom")
+            else "librosa-onset-tempo"
+        )
 
     def estimate(self, audio_path: str) -> float | None:
         if self.engine_id == "librosa-onset-tempo":
             try:
                 from backend.engines.signal_features import global_features
+
                 return global_features(audio_path)[1]
             except Exception:
                 return None

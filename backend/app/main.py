@@ -7,20 +7,27 @@ from fastapi.staticfiles import StaticFiles
 from backend.core.config import PROJECT_ROOT
 
 from backend.app.routes import build_router
+from backend.app.auth import EngineTokenMiddleware
+from backend.version import __version__
+import os
 
 
 def create_app() -> FastAPI:
     router = build_router()
+
     @asynccontextmanager
     async def lifespan(app):
         yield
         router.analysis_queue.close()
+
     app = FastAPI(
         title="DeChord Local Analysis Engine",
-        version="0.1.0",
+        version=__version__,
         description="Offline audio analysis backend for DeChord.",
         lifespan=lifespan,
     )
+    if token := os.environ.get("DECHORD_ENGINE_TOKEN"):
+        app.add_middleware(EngineTokenMiddleware, token=token)
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=(
@@ -32,9 +39,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(router)
-    frontend_dist = PROJECT_ROOT / 'frontend' / 'dist'
+    frontend_dist = PROJECT_ROOT / "frontend" / "dist"
     if frontend_dist.is_dir():
-        app.mount('/', StaticFiles(directory=frontend_dist, html=True), name='studio')
+        app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="studio")
     return app
 
 

@@ -4,6 +4,8 @@ A local music practice workspace for the browser and Tauri desktop shell. Import
 
 ## Start
 
+Desktop installers and Docker images are built by the release pipeline. See [RELEASE_NOTES.md](RELEASE_NOTES.md) for downloads/deployment and [RELEASING.md](RELEASING.md) for the bundled engine architecture and verification gates. The commands below are for source development.
+
 Tested development runtimes: Python 3.10 and Node.js 24. Desktop development also requires Rust and the Tauri platform prerequisites.
 
 From the repository root:

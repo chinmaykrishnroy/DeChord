@@ -1,4 +1,5 @@
 """Synced-lyrics provider matching, independent of HTTP routes and audio analysis."""
+
 from __future__ import annotations
 import json
 import re
@@ -7,6 +8,7 @@ from difflib import SequenceMatcher
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request as UrlRequest, urlopen
+
 
 def _looks_synced_lyrics(text: str) -> bool:
     return any(line.startswith("[") and ":" in line[:12] for line in text.splitlines())
@@ -44,7 +46,9 @@ def _split_artist_title(title: str, artist: str | None) -> tuple[str, str | None
     return clean_title, clean_artist or None
 
 
-def _lrclib_queries(title: str, artist: str | None, duration: float | None) -> list[dict[str, str]]:
+def _lrclib_queries(
+    title: str, artist: str | None, duration: float | None
+) -> list[dict[str, str]]:
     clean_title, clean_artist = _split_artist_title(title, artist)
     original_title = _clean_lyric_lookup_text(title)
     rounded_duration = str(round(duration)) if duration else None
@@ -54,7 +58,9 @@ def _lrclib_queries(title: str, artist: str | None, duration: float | None) -> l
         base = {"track_name": clean_title}
         if clean_artist:
             base["artist_name"] = clean_artist
-        raw_queries.append({**base, **({"duration": rounded_duration} if rounded_duration else {})})
+        raw_queries.append(
+            {**base, **({"duration": rounded_duration} if rounded_duration else {})}
+        )
         raw_queries.append(base)
 
     if original_title and original_title != clean_title:
@@ -70,29 +76,55 @@ def _lrclib_queries(title: str, artist: str | None, duration: float | None) -> l
     return queries
 
 
-def _pick_lrclib_result(payload: Any, duration: float | None, title: str | None = None, artist: str | None = None) -> dict[str, Any] | None:
+def _pick_lrclib_result(
+    payload: Any,
+    duration: float | None,
+    title: str | None = None,
+    artist: str | None = None,
+) -> dict[str, Any] | None:
     if not isinstance(payload, list) or not payload:
         return None
 
     with_lyrics = [
-        item for item in payload
-        if isinstance(item, dict) and (item.get("syncedLyrics") or item.get("plainLyrics"))
+        item
+        for item in payload
+        if isinstance(item, dict)
+        and (item.get("syncedLyrics") or item.get("plainLyrics"))
     ]
     if not with_lyrics:
         return None
 
     def normalized(text):
         return re.sub(r"[^\w]+", " ", str(text).casefold()).strip()
+
     if title:
-        with_lyrics = [item for item in with_lyrics if SequenceMatcher(None, normalized(item.get("trackName", "")), normalized(title)).ratio() >= .65]
+        with_lyrics = [
+            item
+            for item in with_lyrics
+            if SequenceMatcher(
+                None, normalized(item.get("trackName", "")), normalized(title)
+            ).ratio()
+            >= 0.65
+        ]
     if artist:
-        with_lyrics = [item for item in with_lyrics if SequenceMatcher(None, normalized(item.get("artistName", "")), normalized(artist)).ratio() >= .5]
+        with_lyrics = [
+            item
+            for item in with_lyrics
+            if SequenceMatcher(
+                None, normalized(item.get("artistName", "")), normalized(artist)
+            ).ratio()
+            >= 0.5
+        ]
     if not with_lyrics:
         return None
 
     synced = [item for item in with_lyrics if item.get("syncedLyrics")]
     if duration:
-        close_synced = [item for item in synced if abs(float(item.get("duration") or 0) - duration) <= 8]
+        close_synced = [
+            item
+            for item in synced
+            if abs(float(item.get("duration") or 0) - duration) <= 8
+        ]
         if close_synced:
             with_lyrics = close_synced
         return min(
@@ -103,12 +135,26 @@ def _pick_lrclib_result(payload: Any, duration: float | None, title: str | None 
     return with_lyrics[0]
 
 
-def _download_lrclib_lyrics(title: str, artist: str | None, duration: float | None) -> tuple[str, bool] | None:
+def _download_lrclib_lyrics(
+    title: str, artist: str | None, duration: float | None
+) -> tuple[str, bool] | None:
     last_error: Exception | None = None
     clean_title, clean_artist = _split_artist_title(title, artist)
-    queries = [("search", query) for query in _lrclib_queries(title, artist, duration)[:2]]
+    queries = [
+        ("search", query) for query in _lrclib_queries(title, artist, duration)[:2]
+    ]
     if clean_artist:
-        queries.insert(0, ("get", {"track_name": clean_title, "artist_name": clean_artist, **({"duration": str(round(duration))} if duration else {})}))
+        queries.insert(
+            0,
+            (
+                "get",
+                {
+                    "track_name": clean_title,
+                    "artist_name": clean_artist,
+                    **({"duration": str(round(duration))} if duration else {}),
+                },
+            ),
+        )
     deadline = time.monotonic() + 15
     for endpoint, query in queries:
         remaining = deadline - time.monotonic()
@@ -123,7 +169,12 @@ def _download_lrclib_lyrics(title: str, artist: str | None, duration: float | No
             last_error = exc
             continue
 
-        best = _pick_lrclib_result([payload] if isinstance(payload, dict) else payload, duration, clean_title, clean_artist)
+        best = _pick_lrclib_result(
+            [payload] if isinstance(payload, dict) else payload,
+            duration,
+            clean_title,
+            clean_artist,
+        )
         if best is None:
             continue
 

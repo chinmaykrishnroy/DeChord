@@ -87,6 +87,17 @@ export function AppShell() {
     loopRange: loop,
   });
   const sampler = useInstrumentSampler(true);
+  useEffect(() => {
+    if (
+      isTauri() &&
+      backend.connectionStatus === "online" &&
+      backend.capabilities
+    ) {
+      void invoke("desktop_ready").catch((error) =>
+        setImportError(String(error)),
+      );
+    }
+  }, [backend.connectionStatus, backend.capabilities]);
   const identity = backend.audioSourceUrl ?? "demo";
   useEffect(() => {
     const position = session.activate(

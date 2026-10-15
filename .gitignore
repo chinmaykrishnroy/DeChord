@@ -13,3 +13,9 @@ frontend/src-tauri/target/
 frontend/*.tsbuildinfo
 .audit-tmp/
 frontend/audit-current.json
+.venv-release/
+build/
+dist/
+frontend/src-tauri/resources/
+playwright-report/
+test-results/

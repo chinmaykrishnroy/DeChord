@@ -28,7 +28,9 @@ class FakeChordEngine:
     def __init__(self) -> None:
         self.calls: list[tuple[str, float, float | None]] = []
 
-    def recognize(self, audio_path: str, start: float = 0.0, duration: float | None = None):
+    def recognize(
+        self, audio_path: str, start: float = 0.0, duration: float | None = None
+    ):
         self.calls.append((audio_path, start, duration))
         end = start + (duration if duration is not None else 12.0)
         mid = start + min(4.0, max(1.0, (end - start) / 2))
@@ -41,7 +43,9 @@ class FakeChordEngine:
 class LeadingNoChordEngine:
     engine_id = "fake-boundary-chords"
 
-    def recognize(self, audio_path: str, start: float = 0.0, duration: float | None = None):
+    def recognize(
+        self, audio_path: str, start: float = 0.0, duration: float | None = None
+    ):
         end = start + (duration if duration is not None else 12.0)
         return [
             build_chord_segment(start, start + 0.2, "N", source=self.engine_id),
@@ -98,13 +102,17 @@ class BackendAudioServiceTests(unittest.TestCase):
         self.assertEqual(first.duration, 95.0)
 
     def test_uploaded_song_keeps_original_display_title(self) -> None:
-        song = self.service.import_uploaded_song("Nice Song.mp3", BytesIO(b"uploaded-audio"))
+        song = self.service.import_uploaded_song(
+            "Nice Song.mp3", BytesIO(b"uploaded-audio")
+        )
 
         self.assertEqual(song.title, "Nice Song")
         self.assertEqual(Path(song.path).name, f"{song.content_hash}.mp3")
 
     def test_uploaded_media_is_retained_after_successful_analysis(self) -> None:
-        song = self.service.import_uploaded_song("Temp Song.mp3", BytesIO(b"uploaded-audio"))
+        song = self.service.import_uploaded_song(
+            "Temp Song.mp3", BytesIO(b"uploaded-audio")
+        )
         uploaded_path = Path(song.path)
 
         self.assertTrue(uploaded_path.exists())
@@ -113,12 +121,18 @@ class BackendAudioServiceTests(unittest.TestCase):
         self.assertTrue(uploaded_path.exists())
 
     def test_cached_analysis_reuses_one_retained_source(self) -> None:
-        first = self.service.import_uploaded_song("Cached Song.mp3", BytesIO(b"same-audio"))
+        first = self.service.import_uploaded_song(
+            "Cached Song.mp3", BytesIO(b"same-audio")
+        )
         self.service.create_analysis_job(first.id, mode="preview", preview_seconds=30)
-        second = self.service.import_uploaded_song("Cached Song.mp3", BytesIO(b"same-audio"))
+        second = self.service.import_uploaded_song(
+            "Cached Song.mp3", BytesIO(b"same-audio")
+        )
         second_path = Path(second.path)
 
-        cached = self.service.create_analysis_job(second.id, mode="preview", preview_seconds=30)
+        cached = self.service.create_analysis_job(
+            second.id, mode="preview", preview_seconds=30
+        )
 
         self.assertEqual(cached.status, "completed")
         self.assertTrue(second_path.exists())
@@ -127,7 +141,9 @@ class BackendAudioServiceTests(unittest.TestCase):
 
     def test_preview_analyzes_only_preview_window(self) -> None:
         song = self.service.import_song(str(self.audio))
-        job = self.service.create_analysis_job(song.id, mode="preview", preview_seconds=30)
+        job = self.service.create_analysis_job(
+            song.id, mode="preview", preview_seconds=30
+        )
         batches = self.service.get_batches(job.id)
 
         self.assertEqual(job.status, "completed")
@@ -138,12 +154,17 @@ class BackendAudioServiceTests(unittest.TestCase):
 
     def test_batched_mode_stores_absolute_batch_times(self) -> None:
         song = self.service.import_song(str(self.audio))
-        job = self.service.create_analysis_job(song.id, mode="batched", batch_seconds=30)
+        job = self.service.create_analysis_job(
+            song.id, mode="batched", batch_seconds=30
+        )
         batches = self.service.get_batches(job.id)
         timeline = self.service.get_timeline(song.id)
 
         self.assertEqual(len(batches), 4)
-        self.assertEqual([(batch.start, batch.end) for batch in batches], [(0.0, 30.0), (30.0, 60.0), (60.0, 90.0), (90.0, 95.0)])
+        self.assertEqual(
+            [(batch.start, batch.end) for batch in batches],
+            [(0.0, 30.0), (30.0, 60.0), (60.0, 90.0), (90.0, 95.0)],
+        )
         self.assertTrue(all(batch.elapsed_seconds is not None for batch in batches))
         self.assertEqual(self.chord_engine.calls[0][1:], (0.0, 32.0))
         self.assertEqual(self.chord_engine.calls[1][1:], (28.0, 34.0))
@@ -152,7 +173,9 @@ class BackendAudioServiceTests(unittest.TestCase):
 
     def test_large_batch_size_falls_back_to_full_song(self) -> None:
         song = self.service.import_song(str(self.audio))
-        job = self.service.create_analysis_job(song.id, mode="batched", batch_seconds=120)
+        job = self.service.create_analysis_job(
+            song.id, mode="batched", batch_seconds=120
+        )
 
         self.assertEqual(job.mode, "full_song")
         self.assertIsNone(job.batch_seconds)
@@ -176,7 +199,9 @@ class BackendAudioServiceTests(unittest.TestCase):
 
     def test_resumable_batched_job_appends_missing_batches(self) -> None:
         song = self.service.import_song(str(self.audio))
-        job = self.service.create_analysis_job(song.id, mode="batched", batch_seconds=30, run_immediately=False)
+        job = self.service.create_analysis_job(
+            song.id, mode="batched", batch_seconds=30, run_immediately=False
+        )
         now = utc_now_iso()
         self.service.repository.save_batch(
             AnalysisBatch(
@@ -195,10 +220,16 @@ class BackendAudioServiceTests(unittest.TestCase):
                 updated_at=now,
             )
         )
-        self.service.repository.save_segments(job.id, 0, [build_chord_segment(0, 30, "C:maj")])
-        self.service.repository.update_job(job.id, status="failed", progress=0.25, error="stopped")
+        self.service.repository.save_segments(
+            job.id, 0, [build_chord_segment(0, 30, "C:maj")]
+        )
+        self.service.repository.update_job(
+            job.id, status="failed", progress=0.25, error="stopped"
+        )
 
-        resumed = self.service.create_analysis_job(song.id, mode="batched", batch_seconds=30)
+        resumed = self.service.create_analysis_job(
+            song.id, mode="batched", batch_seconds=30
+        )
         batches = self.service.get_batches(resumed.id)
 
         self.assertEqual(resumed.id, job.id)
@@ -210,7 +241,9 @@ class BackendAudioServiceTests(unittest.TestCase):
     def test_job_timeline_can_target_a_specific_analysis(self) -> None:
         song = self.service.import_song(str(self.audio))
         full_job = self.service.create_analysis_job(song.id, mode="full_song")
-        batched_job = self.service.create_analysis_job(song.id, mode="batched", batch_seconds=30)
+        batched_job = self.service.create_analysis_job(
+            song.id, mode="batched", batch_seconds=30
+        )
 
         full_timeline = self.service.get_job_timeline(full_job.id)
         batched_timeline = self.service.get_job_timeline(batched_job.id)
@@ -222,16 +255,24 @@ class BackendAudioServiceTests(unittest.TestCase):
 
     def test_completed_job_is_reused_when_not_forced(self) -> None:
         song = self.service.import_song(str(self.audio))
-        first = self.service.create_analysis_job(song.id, mode="preview", preview_seconds=30)
-        second = self.service.create_analysis_job(song.id, mode="preview", preview_seconds=30)
+        first = self.service.create_analysis_job(
+            song.id, mode="preview", preview_seconds=30
+        )
+        second = self.service.create_analysis_job(
+            song.id, mode="preview", preview_seconds=30
+        )
 
         self.assertEqual(first.id, second.id)
         self.assertEqual(len(self.chord_engine.calls), 1)
 
     def test_force_recompute_replaces_compatible_job(self) -> None:
         song = self.service.import_song(str(self.audio))
-        first = self.service.create_analysis_job(song.id, mode="preview", preview_seconds=30)
-        second = self.service.create_analysis_job(song.id, mode="preview", preview_seconds=30, force=True)
+        first = self.service.create_analysis_job(
+            song.id, mode="preview", preview_seconds=30
+        )
+        second = self.service.create_analysis_job(
+            song.id, mode="preview", preview_seconds=30, force=True
+        )
 
         self.assertNotEqual(first.id, second.id)
         self.assertEqual(self.service.get_job(first.id).status, "completed")
@@ -239,7 +280,9 @@ class BackendAudioServiceTests(unittest.TestCase):
     def test_corrections_override_timeline_segments(self) -> None:
         song = self.service.import_song(str(self.audio))
         self.service.create_analysis_job(song.id, mode="full_song")
-        timeline = self.service.save_corrections(song.id, [Correction(start=2.0, end=6.0, label="F#:dim7")])
+        timeline = self.service.save_corrections(
+            song.id, [Correction(start=2.0, end=6.0, label="F#:dim7")]
+        )
 
         corrected = [segment for segment in timeline.segments if segment.corrected]
         self.assertEqual(len(corrected), 1)
@@ -249,17 +292,23 @@ class BackendAudioServiceTests(unittest.TestCase):
     def test_export_uses_corrected_timeline(self) -> None:
         song = self.service.import_song(str(self.audio))
         self.service.create_analysis_job(song.id, mode="full_song")
-        self.service.save_corrections(song.id, [Correction(start=2.0, end=6.0, label="D:min7")])
+        self.service.save_corrections(
+            song.id, [Correction(start=2.0, end=6.0, label="D:min7")]
+        )
         rows = self.service.export_chords(song.id)
 
-        self.assertTrue(any(row["chord"] == "Dm7" and row["source"] == "correction" for row in rows))
+        self.assertTrue(
+            any(row["chord"] == "Dm7" and row["source"] == "correction" for row in rows)
+        )
 
     def test_invalid_correction_range_is_rejected(self) -> None:
         song = self.service.import_song(str(self.audio))
         self.service.create_analysis_job(song.id, mode="full_song")
 
         with self.assertRaises(ValueError):
-            self.service.save_corrections(song.id, [Correction(start=8.0, end=4.0, label="C")])
+            self.service.save_corrections(
+                song.id, [Correction(start=8.0, end=4.0, label="C")]
+            )
 
 
 if __name__ == "__main__":

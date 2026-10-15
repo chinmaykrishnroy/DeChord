@@ -3,11 +3,14 @@ import type { LyricsLine, LyricsState } from "../types/music";
 const timeTagPattern = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]/g;
 const metadataTagPattern = /^\[(?:ar|al|ti|au|by|re|ve|id|length|offset):.*]$/i;
 const bracketTagPattern = /\[[^\]]+]/g;
-const unusableLyricsPattern = /^(?:not\s*found|no\s+lyrics?\s+found|lyrics?\s+unavailable|unavailable)$/i;
+const unusableLyricsPattern =
+  /^(?:not\s*found|no\s+lyrics?\s+found|lyrics?\s+unavailable|unavailable)$/i;
 
 function parseTime(minutes: string, seconds: string, fraction = "0") {
   const normalizedFraction = fraction.padEnd(3, "0").slice(0, 3);
-  return Number(minutes) * 60 + Number(seconds) + Number(normalizedFraction) / 1000;
+  return (
+    Number(minutes) * 60 + Number(seconds) + Number(normalizedFraction) / 1000
+  );
 }
 
 export function hasUsableLyricsText(text: string) {
@@ -23,7 +26,10 @@ export function hasUsableLyricsText(text: string) {
   return body.length > 0 && !unusableLyricsPattern.test(body);
 }
 
-export function parseLyrics(text: string, source: LyricsState["source"]): LyricsState {
+export function parseLyrics(
+  text: string,
+  source: LyricsState["source"],
+): LyricsState {
   const lines: LyricsLine[] = [];
   if (!hasUsableLyricsText(text)) {
     return {
@@ -58,7 +64,9 @@ export function parseLyrics(text: string, source: LyricsState["source"]): Lyrics
     }
 
     const lastMatch = matches[matches.length - 1];
-    const body = line.slice((lastMatch.index ?? 0) + lastMatch[0].length).trim();
+    const body = line
+      .slice((lastMatch.index ?? 0) + lastMatch[0].length)
+      .trim();
     matches.forEach((match, matchIndex) => {
       lines.push({
         id: `line-${index}-${matchIndex}-${match[1]}-${match[2]}-${match[3] ?? "0"}`,
@@ -70,8 +78,12 @@ export function parseLyrics(text: string, source: LyricsState["source"]): Lyrics
 
   const offsetTag = text.match(/\[offset:\s*(-?\d+)\]/i);
   const offsetSeconds = offsetTag ? Number(offsetTag[1]) / 1000 : 0;
-  for (const line of lines) if (line.timeSeconds !== null) line.timeSeconds = Math.max(0, line.timeSeconds + offsetSeconds);
-  lines.sort((a,b) => (a.timeSeconds ?? Infinity) - (b.timeSeconds ?? Infinity));
+  for (const line of lines)
+    if (line.timeSeconds !== null)
+      line.timeSeconds = Math.max(0, line.timeSeconds + offsetSeconds);
+  lines.sort(
+    (a, b) => (a.timeSeconds ?? Infinity) - (b.timeSeconds ?? Infinity),
+  );
 
   return {
     status: lines.length > 0 ? "ready" : "empty",

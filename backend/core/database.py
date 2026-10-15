@@ -109,7 +109,9 @@ CREATE TABLE IF NOT EXISTS song_lyrics (
 class AnalysisDatabase:
     """Small SQLite wrapper used by repositories."""
 
-    def __init__(self, path: str | Path | None = None, config: BackendConfig | None = None) -> None:
+    def __init__(
+        self, path: str | Path | None = None, config: BackendConfig | None = None
+    ) -> None:
         self.config = config or BackendConfig()
         self.path = Path(path) if path is not None else self.config.database_path
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -128,7 +130,9 @@ class AnalysisDatabase:
     def _migrate(self, connection: sqlite3.Connection) -> None:
         columns = {
             row[1]
-            for row in connection.execute("PRAGMA table_info(analysis_batches)").fetchall()
+            for row in connection.execute(
+                "PRAGMA table_info(analysis_batches)"
+            ).fetchall()
         }
         migrations = {
             "started_at": "ALTER TABLE analysis_batches ADD COLUMN started_at TEXT",

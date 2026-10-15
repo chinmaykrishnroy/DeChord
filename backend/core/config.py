@@ -7,7 +7,9 @@ import os
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND_ROOT.parent
-DATA_ROOT = Path(os.environ.get("DECHORD_DATA_DIR", str(PROJECT_ROOT / "cache" / "backend"))).expanduser()
+DATA_ROOT = Path(
+    os.environ.get("DECHORD_DATA_DIR", str(PROJECT_ROOT / "cache" / "backend"))
+).expanduser()
 
 
 @dataclass(frozen=True)

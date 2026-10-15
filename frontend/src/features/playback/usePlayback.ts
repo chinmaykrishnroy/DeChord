@@ -81,11 +81,7 @@ export function usePlayback(
       ? el.duration
       : config.current.durationSeconds;
     const time = pendingSeek.current ?? el.currentTime;
-    const position = playbackPosition(
-      time,
-      duration,
-      config.current.loop,
-    );
+    const position = playbackPosition(time, duration, config.current.loop);
     if (position.looped && playIntent.current) el.currentTime = position.time;
     setPlayback({
       isPlaying: !el.paused && !el.ended,

@@ -7,8 +7,7 @@ import importlib.util
 class KeyEngine(Protocol):
     engine_id: str
 
-    def estimate(self, audio_path: str) -> str | None:
-        ...
+    def estimate(self, audio_path: str) -> str | None: ...
 
 
 class MadmomKeyEngine:
@@ -16,12 +15,17 @@ class MadmomKeyEngine:
 
     def __init__(self):
         self.processor = None
-        self.engine_id = "madmom-key" if importlib.util.find_spec("madmom") else "librosa-key-profile"
+        self.engine_id = (
+            "madmom-key"
+            if importlib.util.find_spec("madmom")
+            else "librosa-key-profile"
+        )
 
     def estimate(self, audio_path: str) -> str | None:
         if self.engine_id == "librosa-key-profile":
             try:
                 from backend.engines.signal_features import global_features
+
                 return global_features(audio_path)[0]
             except Exception:
                 return None
