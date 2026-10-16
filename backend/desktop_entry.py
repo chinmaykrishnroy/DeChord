@@ -7,8 +7,26 @@ import importlib
 import multiprocessing
 import os
 from pathlib import Path
+import signal
 import sys
 import threading
+import time
+
+
+OWNER_EXIT_TIMEOUT_SECONDS = 5.0
+
+
+def watch_owner(server):
+    # EOF cannot confuse a recycled OS process ID with our owner.
+    sys.stdin.buffer.read()
+    server.should_exit = True
+    # A stopped Uvicorn loop does not mean the process exited: Python joins
+    # active executor workers during interpreter shutdown. Keep a real deadline.
+    time.sleep(OWNER_EXIT_TIMEOUT_SECONDS)
+    if os.name == "posix" and os.getpgrp() == os.getpid():
+        # Rust gives this engine a private group, including its media children.
+        os.killpg(os.getpgrp(), signal.SIGKILL)
+    os._exit(0)
 
 
 def main():
@@ -59,21 +77,9 @@ def main():
             app, host="127.0.0.1", port=args.port, access_log=False, log_level="warning"
         )
     )
-    stopped = threading.Event()
-
-    def watch_owner():
-        # EOF is portable and cannot confuse a recycled OS process ID with our owner.
-        sys.stdin.buffer.read()
-        server.should_exit = True
-        if not stopped.wait(5):
-            os._exit(0)
-
     if args.owned:
-        threading.Thread(target=watch_owner, daemon=True).start()
-    try:
-        server.run()
-    finally:
-        stopped.set()
+        threading.Thread(target=watch_owner, args=(server,), daemon=True).start()
+    server.run()
 
 
 if __name__ == "__main__":
