@@ -39,6 +39,7 @@ jobs:
         if: always()
         with:
           name: browser-evidence
+          retention-days: 7
           path: |
             frontend/playwright-report
             frontend/test-results
@@ -127,6 +128,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ runner.os }}
+          retention-days: 3
           compression-level: 0
           path: |
             frontend/src-tauri/target/release/bundle/nsis/*.exe
@@ -162,6 +164,17 @@ jobs:
           cache-to: type=gha,mode=max,scope=web-${{ matrix.arch }}
       - run: docker run -d --name dechord-test -p 127.0.0.1:8765:8765 dechord:test
       - run: python3 scripts/smoke_web.py
+      - run: |
+          docker tag dechord:test ghcr.io/chinmaykrishnroy/dechord:1.0.0
+          docker save ghcr.io/chinmaykrishnroy/dechord:1.0.0 | gzip -1 > DeChord_1.0.0_linux_${{ matrix.arch }}_docker.tar.gz
+          gzip -dc DeChord_1.0.0_linux_${{ matrix.arch }}_docker.tar.gz | docker load
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-${{ matrix.arch }}
+          retention-days: 3
+          compression-level: 0
+          path: '*_docker.tar.gz'
+          if-no-files-found: error
       - if: always()
         run: docker logs dechord-test
       - if: startsWith(github.ref, 'refs/tags/v1.')
@@ -191,6 +204,10 @@ jobs:
         with:
           pattern: desktop-*
           path: release-artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: docker-*
+          path: release-artifacts
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -200,8 +217,8 @@ jobs:
       - run: |
           version="${RELEASE_TAG#v}"
           docker buildx imagetools create --tag "ghcr.io/chinmaykrishnroy/dechord:$version" --tag ghcr.io/chinmaykrishnroy/dechord:latest "ghcr.io/chinmaykrishnroy/dechord:${RELEASE_TAG}-amd64" "ghcr.io/chinmaykrishnroy/dechord:${RELEASE_TAG}-arm64"
-          find release-artifacts -type f \( -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*portable.zip' \) -exec cp '{}' . \;
-          sha256sum ./*.exe ./*.deb ./*.AppImage ./*portable.zip > SHA256SUMS.txt
-          gh release create "$RELEASE_TAG" ./*.exe ./*.deb ./*.AppImage ./*portable.zip SHA256SUMS.txt --verify-tag --title "DeChord $RELEASE_TAG" --notes-file RELEASE_NOTES.md
+          find release-artifacts -type f \( -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*portable.zip' -o -name '*_docker.tar.gz' \) -exec cp '{}' . \;
+          sha256sum ./*.exe ./*.deb ./*.AppImage ./*portable.zip ./*_docker.tar.gz compose.yaml > SHA256SUMS.txt
+          gh release create "$RELEASE_TAG" ./*.exe ./*.deb ./*.AppImage ./*portable.zip ./*_docker.tar.gz compose.yaml SHA256SUMS.txt --verify-tag --title "DeChord $RELEASE_TAG" --notes-file RELEASE_NOTES.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

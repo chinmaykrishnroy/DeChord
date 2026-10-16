@@ -4,7 +4,7 @@ A local music practice workspace for the browser and Tauri desktop shell. Import
 
 ## Start
 
-Desktop installers and Docker images are built by the release pipeline. See [RELEASE_NOTES.md](RELEASE_NOTES.md) for downloads/deployment and [RELEASING.md](RELEASING.md) for the bundled engine architecture and verification gates. The commands below are for source development.
+Download desktop packages from [GitHub Releases](https://github.com/chinmaykrishnroy/DeChord/releases). Windows x64 and Linux x86_64 packages include the UI, Python engine, CPU models and FFmpeg. Linux Docker images support amd64 and arm64. See [RELEASE_NOTES.md](RELEASE_NOTES.md) for deployment and [RELEASING.md](RELEASING.md) for architecture and verification gates. The commands below are for source development.
 
 Tested development runtimes: Python 3.10 and Node.js 24. Desktop development also requires Rust and the Tauri platform prerequisites.
 
@@ -46,13 +46,13 @@ Environment settings:
 |---|---|
 | `DECHORD_CHORD_ENGINE=madmom` | Select the installed madmom engine explicitly |
 | `DECHORD_DATA_DIR` | Override the managed audio/SQLite/work directory; default `cache/backend` |
-| `VITE_DECHORD_BACKEND_URL` | Set the frontend API URL at development/build time; default `http://127.0.0.1:8765` |
+| `VITE_DECHORD_BACKEND_URL` | Override the web API URL at build time; default same-origin, with `/api` proxying to port 8765 in development. Desktop uses its supervised engine connection. |
 
 The service binds to loopback by default. Public hosting needs a separate authentication, deployment, and resource-isolation design; the local API is not a multi-user cloud service.
 
 ## Workspace
 
-Use **Customize** to add or hide guitar, piano, lyrics, timeline, chord-sheet, and analysis widgets. Drag their handles and resize their lower-right corners; they snap to a grid. Wide, compact, and narrow layouts are saved separately in the browser. Arrow keys on a focused handle move a widget with collision resolution. Narrow instrument widgets switch to a vertical chord diagram.
+Use **Customize** to add or hide guitar, piano, lyrics, chord-sheet, and analysis widgets. Drag their handles and resize their lower-right corners; they snap to a grid. The practice timeline stays anchored above the player. Wide, compact, and narrow layouts are saved separately in the browser. Arrow keys on a focused handle move a widget with collision resolution. Narrow instrument widgets switch to a vertical chord diagram.
 
 **Song library** reopens retained audio and analysis. **Lyrics** provides a larger reading view. **Settings** controls automatic lyric lookup and shows backend status. Desktop window controls appear only inside Tauri.
 
@@ -100,6 +100,6 @@ cargo check --locked --jobs 2
 
 `scripts/runtime_probe.py` generates a synthetic audio fixture and exercises local upload, analysis, timeline, and retained-audio playback. This is a pipeline smoke test, not a recognition-quality benchmark.
 
-Desktop source compilation and development launching are separate from distributing a self-contained installer. The Python environment/model stack is currently managed separately from the Tauri binary. Packaged installer acceptance and broad musical-accuracy/listening benchmarks remain release gates.
+Production desktop packages embed the built frontend and include a relocatable Python engine, models and FFmpeg. Rust supervises that engine over an authenticated loopback connection; users do not install development runtimes. CI tests actual frozen inference and rendered Windows/Linux desktop startup and shutdown. Clean-machine install/update/uninstall acceptance, broad musical-accuracy benchmarks and audible listening checks remain separate validation work.
 
 The original PyQt application remains under `legacy_desktop`; root `run.bat` and `run.sh` still launch it. See [legacy_desktop/README.md](legacy_desktop/README.md). Project code is MIT licensed; review dependency, model, and sample-asset licenses before redistribution.

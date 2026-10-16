@@ -23,7 +23,14 @@ cd ..
 python scripts/smoke_desktop.py frontend/src-tauri/target/release/dechord.exe
 ```
 
-On Linux, use `dechord-engine` without `.exe`, build `--bundles deb,appimage`, install the Debian artifact, then run the desktop smoke test against `/usr/bin/dechord` under `xvfb-run -a dbus-run-session`. A native Linux build is required; PyInstaller output is not cross-platform.
+On Linux, use `dechord-engine` without `.exe`. From the frontend directory, expose the private ELF dependency directories to linuxdeploy when building:
+
+```bash
+engine_libs="$(find "$PWD/src-tauri/resources/engine/_internal" -type f -name '*.so*' -printf '%h\n' | sort -u | paste -sd:)"
+LD_LIBRARY_PATH="$engine_libs:${LD_LIBRARY_PATH:-}" APPIMAGE_EXTRACT_AND_RUN=1 npm run tauri:build -- --config src-tauri/tauri.release.conf.json --bundles deb,appimage
+```
+
+Install the Debian artifact, then run the desktop smoke test against `/usr/bin/dechord` under `xvfb-run -a dbus-run-session`. Test the AppImage separately with `APPIMAGE_EXTRACT_AND_RUN=1`. A native Linux build is required; PyInstaller output is not cross-platform.
 
 The smoke test requires a report sent by the rendered frontend after it has connected to its bundled API. It then checks that the engine port closes when the desktop exits. The independent frozen-engine smoke verifies authentication, upload/import, bundled model inference, media ranges and owner-pipe shutdown. Generated tones check execution and data flow, not recognition accuracy.
 
@@ -39,4 +46,4 @@ v0.1.1 intentionally identifies the legacy main commit before the Studio merge. 
 
 The Docker build serves the production frontend from FastAPI on the same origin, uses one bounded inference worker and runs as an unprivileged user. `/data` is the persistent library volume. compose.yaml binds only to 127.0.0.1. External hosting needs authenticated TLS ingress and operator-managed access; this release is a single-user local application, not a multi-tenant service.
 
-The container is built and exercised natively for amd64 and arm64 before the release manifest is published. Runtime dependencies are installed from the same declared requirements as desktop; each frozen engine includes its installed dependency inventory and FFmpeg license output. The [lv-chordia project](https://github.com/openmirlab/lv-chordia) documents its bundled model artifacts.
+The container is built and exercised natively for amd64 and arm64 before the release manifest is published. Both image archives are also round-tripped through `docker load` and attached to the release, allowing installation without registry access. A newly created GHCR package may require a one-time visibility setting in GitHub; the release archives remain available independently. Runtime dependencies are installed from the same declared requirements as desktop; each frozen engine includes its installed dependency inventory and FFmpeg license output. The [lv-chordia project](https://github.com/openmirlab/lv-chordia) documents its bundled model artifacts.

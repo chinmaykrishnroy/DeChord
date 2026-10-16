@@ -15,11 +15,20 @@ The new practice studio brings guitar, piano, synced lyrics and a continuous cho
 
 Windows x64 installer/portable ZIP and Linux x86_64 AppImage/Debian packages include the frontend, private local API engine, CPU inference models and FFmpeg tools. Linux desktop builds target Ubuntu 24.04 or a compatible newer environment. Python and Node.js are not required on the user's machine. The desktop starts a version-matched engine on a private loopback port, authenticates its requests and stops the engine when the app exits. Audio, analysis and lyrics are kept in the user's application data directory.
 
+The Windows installer includes offline WebView2 setup. The portable ZIP uses the system WebView2 runtime; choose the installer if that runtime is absent.
+
 The pipeline tests the frozen engine with actual inference and launches the desktop UI on Windows and Linux before publishing. SHA256SUMS.txt records the installer/package hashes. Binaries are unsigned; platform signing is not part of this release.
 
 ## Web
 
-The shared frontend/API is distributed as `ghcr.io/chinmaykrishnroy/dechord:1.0.0`, for Linux amd64 and arm64. The included compose.yaml binds to localhost and preserves library data in a named volume. Run `docker compose up -d`, then open http://127.0.0.1:8765. Put authenticated TLS access in front of the service before exposing it beyond a trusted local machine; the application has no multi-user account model.
+The shared frontend/API is distributed as `ghcr.io/chinmaykrishnroy/dechord:1.0.0`, for Linux amd64 and arm64. Matching image archives and compose.yaml are attached to this release. To load an archive without registry access, download the archive for your machine's architecture and compose.yaml into one directory, then run:
+
+```sh
+docker load -i DeChord_1.0.0_linux_amd64_docker.tar.gz
+docker compose up -d --pull never
+```
+
+Use the `arm64` archive on ARM machines. Open http://127.0.0.1:8765. The compose file binds to localhost and preserves library data in a named volume. Registry users can run `docker compose up -d` directly after authenticating if the package requires it. Put authenticated TLS access in front of the service before exposing it beyond a trusted local machine; the application has no multi-user account model.
 
 ## Verification limits
 

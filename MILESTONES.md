@@ -10,9 +10,11 @@ The last retained song reopens paused. Position, current A–B loop, tempo, tran
 
 Scope: local browser/desktop profile, one current loop per song. Named section collections, per-chord preferred fingerings and portable backup are not delivered.
 
-## Next: desktop distribution
+## Implemented: desktop and web distribution
 
-Bundle and supervise an explicit Python runtime, FFmpeg and compatible analysis dependencies. Produce an installer and verify first run, update, shutdown, source recovery and uninstall on a Windows machine without development tools. Preserve library data on upgrade. The existing BAT launcher is a development/testing entry point, not completion of this milestone.
+Tauri embeds the UI and supervises a bundled Python runtime, CPU inference models and FFmpeg through a private authenticated loopback connection. Version checks, checkpoint integrity and bounded child cleanup protect startup and shutdown. The release pipeline produces Windows installer/portable and Linux Debian/AppImage packages, exercises frozen inference and native UI startup, and tests Docker images on native amd64/arm64 runners before publication. See RELEASING.md and VERIFICATION.md for evidence and limits.
+
+Clean-machine install/update/uninstall acceptance and data-preserving upgrade trials remain outstanding. The existing BAT launcher is a development/testing entry point; release users open the packaged application.
 
 ## Next: musical trust
 

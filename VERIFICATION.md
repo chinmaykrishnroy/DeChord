@@ -1,5 +1,15 @@
 # Studio rework verification
 
+## Bundled distribution — 16 October 2026
+
+- The frozen Windows engine completed real lv-chordia 1.1.0 inference locally with all five packaged checkpoints verified against the build manifest. The same test checked authenticated access, rejected unauthenticated requests, served a byte-range audio response and exited after its ownership pipe closed. No source Python imports are used by that executable.
+- CI run [38863813690](https://github.com/chinmaykrishnroy/DeChord/actions/runs/38863813690) passed the frontend suite (27 tests), three Chromium integration tests, all four Windows/Linux Python 3.10/3.11 jobs (57 tests each), real frozen inference on both platforms, native desktop launch/shutdown on Windows and Linux, and native Docker build/inference on amd64 and arm64. The final tag pipeline repeats every gate before publication.
+- Binary testing exposed Windows native-library initialization deadlocks in worker-thread imports. The packaged entry point initializes NumPy, SciPy, Torch and the required lazy librosa modules on the main thread before opening the service. The independent inference gate passed after this change. Linux AppImage deployment also required private ELF search directories and exclusion of Numba's unused optional TBB pool.
+- Both Linux x86_64 packages passed actual UI launch tests on Ubuntu 24.04: the installed Debian app and the AppImage each reported `frontend_ready: true`, a healthy version-matched engine and a closed engine port after exit.
+- The Windows x64 release binary copied into its portable distribution likewise reported `frontend_ready: true`, a healthy bundled 1.0.0 engine and a closed engine port after exit on Windows Server 2022. The installer was built with offline WebView2 setup; interactive installation itself was not automated.
+- Each desktop includes a Python runtime, CPU models, FFmpeg and dependency/license inventories. The installed user profile owns persistent data and the Numba cache. Per-launch ports/tokens and version matching isolate the supervised engine; normal exit and platform process-group cleanup bound its lifetime. The Windows release uses the GUI subsystem and includes an offline WebView2 installer.
+- This supersedes the older notes below about unavailable lv-chordia and separately managed production runtimes. Generated tones establish inference execution and data flow, not chord accuracy. Hosted native UI tests do not replace clean-machine install/update/uninstall trials, physical audio-device testing or musician validation. Binaries remain unsigned.
+
 ## Sidebar scrolling regression — 16 October 2026
 
 - Reproduced the reported clipped-song strip at 1280x720 after scrolling: the header started 11px below the scroll container's top, and hit-testing above the header returned a song button. A live assertion failed with `REGRESSION: a song paints above the Your music header after scrolling`.

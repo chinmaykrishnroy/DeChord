@@ -12,6 +12,7 @@ frontend/.vite/
 frontend/src-tauri/target/
 frontend/*.tsbuildinfo
 .audit-tmp/
+.assessment/
 frontend/audit-current.json
 .venv-release/
 build/
