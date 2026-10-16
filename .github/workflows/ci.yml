@@ -1,7 +1,7 @@
 name: Verify and package
 on:
   push:
-    branches: [main, pro-backend-foundation]
+    branches: [main, DEV]
     tags: ['v1.*']
   pull_request:
   workflow_dispatch:
