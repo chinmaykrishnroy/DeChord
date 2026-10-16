@@ -1,256 +1,105 @@
-# DeChord - Real-Time Music Key and Chord Recognition Tool
+# DeChord Studio
 
-Welcome to DeChord! This application is designed for musicians, music enthusiasts, and anyone interested in analyzing the harmonic content of audio files. DeChord uses advanced music analysis algorithms to recognize the musical key and chords in an audio file and displays this information in real-time through an intuitive graphical user interface.
+A local music practice workspace for the browser and Tauri desktop shell. Import a recording, follow its chords, choose guitar voicings, loop a passage, transpose playback, and follow synced lyrics.
 
-## Images
+## Start
 
-![Screenshot (10)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/f2a399a5-7ba3-430a-bf9a-795f2abc88a8)
-![Screenshot (9)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/fc6256c8-bf94-4542-b985-2dafbf2d3990)
-![Screenshot (14)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/f1cd092b-f5c5-4f02-8a0a-077fc399564e)
+Download desktop packages from [GitHub Releases](https://github.com/chinmaykrishnroy/DeChord/releases). Windows x64 and Linux x86_64 packages include the UI, Python engine, CPU models and FFmpeg. Linux Docker images support amd64 and arm64. See [RELEASE_NOTES.md](RELEASE_NOTES.md) for deployment and [RELEASING.md](RELEASING.md) for architecture and verification gates. The commands below are for source development.
 
-## Features
+Tested development runtimes: Python 3.10 and Node.js 24. Desktop development also requires Rust and the Tauri platform prerequisites.
 
-### Key and Chord Recognition
+From the repository root:
 
-- **Key Recognition:** Detects the musical key of an audio file using the `madmom` library.
-- **Chord Recognition:** Identifies chords in the audio file with start and end times.
-- **Native Chord Engine:** Uses `lv-chordia` as the default large-vocabulary chord engine, with `madmom` kept as the secondary fallback engine.
-- **Chord Label Normalization:** Normalizes detected chord labels into a consistent display format, with support for richer labels such as seventh, suspended, diminished, augmented, extended, altered, and slash chords when an analysis engine provides them.
-- **Chord Details:** Shows the current chord quality and note spelling while the song plays.
-- **Real-Time Display:** Shows the current, previous, and next chords in real-time as the audio plays.
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install -r backend\requirements-backend.txt
+.venv\Scripts\python -m pip install -r backend\requirements-analysis.txt
+cd frontend
+npm ci
+cd ..
+python scripts/run_studio.py
+```
 
-### Audio Playback
+Open [the local web app](http://127.0.0.1:5184). On Windows, `run_web.bat` runs the same launcher. On Linux/macOS use `sh run_studio.sh` after creating `.venv` and installing the requirements with `.venv/bin/python`.
 
-- **Play/Pause:** Controls to play and pause the audio.
-- **Seek:** Allows seeking forward and backward in the audio track.
-- **Volume Control:** Adjustable volume control through a slider.
-- **Mute:** Mute and unmute the audio.
+For the desktop shell:
 
-### User Interface
+```powershell
+python scripts/run_studio.py --desktop
+```
 
-- **Drag and Drop:** Supports dragging and dropping audio files into the application window.
-- **Theme Toggle:** Switch between dark and light themes.
-- **Progress Slider:** Displays and controls the current position within the audio file.
-- **Key Display:** Shows the detected musical key.
-- **Export Chords:** Export recognized chord timelines.
-- **Enhanced Exports:** Saves chord timelines with quality, notes, and bass information in text, CSV, and JSON formats.
-- **Keyboard Shortcuts:** Various keyboard shortcuts for quick access to functions.
+`run_app.bat` launches the desktop shell. The launcher starts the backend only if DeChord is not already serving on 8765 and stops the processes it owns on exit. It uses `.venv` first, then the older root `venv` when present. Installing packages is an explicit setup step, not repeated every launch.
 
-### Additional Features
+`python scripts/run_studio.py --backend-only` runs only the engine. Once `npm run build` has created `frontend/dist`, the backend also serves the built web UI at [port 8765](http://127.0.0.1:8765). The API tester remains at `/tester` and API documentation at `/docs`.
 
-- **GitHub Redirect:** Opens the GitHub repository in a web browser.
-- **Exception Handling:** Custom exception handler to manage and print exceptions.
+### Analysis engines
 
-## Technology Stack
+- `lv-chordia` is preferred when installed. Current releases with `LVChordiaSession` keep the ensemble loaded between calls. Older releases use their one-shot API.
+- An existing compatible madmom installation is supported as the chord fallback and key/tempo engine. It is optional; install its maintained source distribution if desired. It includes native dependencies and may require a compiler.
+- Without madmom, the lv-chordia dependency stack's librosa provides shared key-profile and onset-tempo estimates. These estimates do not constitute detected beats or downbeats.
+- FFmpeg/ffprobe are required for media import. `static-ffmpeg` can prepare them on first use when absent; that first setup requires internet access.
+- `/capabilities` reports installed packages and selected engine IDs. Package availability does not guarantee model accuracy or successful loading for every file.
 
-### Libraries and Frameworks
+Environment settings:
 
-- **Python:** The primary programming language used for development.
-- **PyQt5:** For building the graphical user interface.
-- **lv-chordia:** Large-vocabulary chord recognition for seventh, suspended, diminished, augmented, extended, altered, and slash chords.
-- **madmom:** Music signal processing library used for key/tempo analysis and as the fallback chord engine.
+| Setting | Purpose |
+|---|---|
+| `DECHORD_CHORD_ENGINE=madmom` | Select the installed madmom engine explicitly |
+| `DECHORD_DATA_DIR` | Override the managed audio/SQLite/work directory; default `cache/backend` |
+| `VITE_DECHORD_BACKEND_URL` | Override the web API URL at build time; default same-origin, with `/api` proxying to port 8765 in development. Desktop uses its supervised engine connection. |
 
-## Windows Installation
+The service binds to loopback by default. Public hosting needs a separate authentication, deployment, and resource-isolation design; the local API is not a multi-user cloud service.
 
-### Prerequisites
+## Workspace
 
-- Python 3.7 or higher
-- Pip (Python package installer)
+Use **Customize** to add or hide guitar, piano, lyrics, chord-sheet, and analysis widgets. Drag their handles and resize their lower-right corners; they snap to a grid. The practice timeline stays anchored above the player. Wide, compact, and narrow layouts are saved separately in the browser. Arrow keys on a focused handle move a widget with collision resolution. Narrow instrument widgets switch to a vertical chord diagram.
 
-### Setup
+**Song library** reopens retained audio and analysis. **Lyrics** provides a larger reading view. **Settings** controls automatic lyric lookup and shows backend status. Desktop window controls appear only inside Tauri.
 
-1. Clone the repository:
+The startup sample is clearly marked as a demo. It is a progression preview, not analysis of an imported recording.
 
-   ```bash
-   git clone https://github.com/chinmaykrishnroy/DeChord.git
-   cd DeChord
-   ```
+## Resume practice
 
-2. Run the main script. It creates the virtual environment, installs all dependencies, prepares FFmpeg, and starts the app:
+Reopening restores the last retained song, playback position, current A–B loop, tempo, transposition, volume, instrument page, guitar preferences and lyric offset. Playback stays paused. Selecting another library song restores that song's own settings. The workspace keeps its saved layouts for each screen size.
 
-   ```bash
-   run.bat
-   ```
+Practice settings are saved locally in the browser or desktop profile once per second when changed, on song switches and when leaving the page. The most recent 50 songs are retained. Browser and desktop profiles save separately; this is not account synchronization or a backup. Clearing site data removes these settings but leaves backend audio, analysis and lyrics intact. A missing library song falls back to the browsing/demo workspace. Storage failures are shown in the app.
 
-3. Run `createWindowsShortcut.bat` to generate a shortcut for the application:
+## Guitar voicings
 
-   ```bash
-   createWindowsShortcut.bat
-   ```
+The engine validates each candidate against the chord's pitch classes, required slash bass, fret span, and four-finger limit. Open/compact mode uses independent fingers; barre mode uses a verified index-finger barre. It ranks easier and lower-position shapes first and offers alternative voicings. Capo is explicit: fret numbers are relative to it, while the diagram and note previews sound in the original chord's key.
 
-4. <b> Use the shortcut file 'DeChord' to open the application from next time. </b>
+Unsupported combinations show an unavailable state rather than an arbitrary chord-tone map. Finger-count and fret-span checks are conservative heuristics, not a guarantee that every hand can play every suggested shape. The capo recommendation evaluates unique chords so repeating a progression cannot skew the result.
 
-## Linux/MacOS Installation
+## Playback and timeline
 
-### Prerequisites
+The player uses the actual local/managed audio source through Web Audio and SoundTouch. Tempo and pitch are controlled independently. Transpose updates chord labels, tones, displayed key, instrument diagrams, and exports. Space toggles playback and arrow keys seek when focus is outside controls.
 
-- Python 3.7 or higher
-- Pip (Python package installer)
+The timeline is proportional to song time. Click to seek, drag to select a loop, zoom for short chord changes, and toggle follow mode to browse independently. It shows time, not an invented beat/bar grid. Loop handling lives with the playback clock, including loops ending at the end of the track. Progressive analysis updates do not automatically resume paused playback.
 
-### Setup
+Chord-sheet edits save to the backend; reset transpose to zero before editing source chords. Corrections preserve unaffected time ranges. Text chart export uses the displayed arrangement.
 
-1. Clone the repository:
+## Synced lyrics
 
-   ```bash
-   git clone https://github.com/chinmaykrishnroy/DeChord.git
-   cd DeChord
-   ```
+When enabled, importing/opening a song first checks stored lyrics and then searches LRCLIB. Search prefers synced lyrics and matches title, artist, and duration. Song metadata goes to LRCLIB; audio is not sent there. Automatic lookup can be disabled. An explicit search form lets you correct metadata.
 
-2. Build and run the main script:
+LRC/TXT import works locally. Timestamped lines follow playback, click to seek, support LRC offsets and a saved per-song timing adjustment shared by the workspace and Lyrics page, and scroll inside the lyrics panel. Plain lyrics remain readable when timed lyrics are unavailable. No provider guarantees coverage for every recording.
 
-   ```bash
-   chmod +x run.sh && ./run.sh
-   ```
+## Architecture and checks
 
-3. Run `createLinuxShortcut.sh` to generate Desktop shortcut for the application:
+Read [ARCHITECTURE.md](ARCHITECTURE.md) for boundaries and runtime behavior. Tests:
 
-   ```bash
-   chmod +x createLinuxShortcut.sh && ./createLinuxShortcut.sh
-   ```
+```powershell
+.venv\Scripts\python -m pip install -r backend\requirements-dev.txt
+.venv\Scripts\python -m unittest discover -s tests -v
+cd frontend
+npm test
+npm run build
+cd src-tauri
+cargo check --locked --jobs 2
+```
 
-4. <b> Use the Desktop Shortcut file 'DeChord' to open the application from the next time. </b>
+`scripts/runtime_probe.py` generates a synthetic audio fixture and exercises local upload, analysis, timeline, and retained-audio playback. This is a pipeline smoke test, not a recognition-quality benchmark.
 
-### Runtime Settings
+Production desktop packages embed the built frontend and include a relocatable Python engine, models and FFmpeg. Rust supervises that engine over an authenticated loopback connection; users do not install development runtimes. CI tests actual frozen inference and rendered Windows/Linux desktop startup and shutdown. Clean-machine install/update/uninstall acceptance, broad musical-accuracy benchmarks and audible listening checks remain separate validation work.
 
-`run.bat` and `run.sh` install `lv-chordia` as the native chord engine. If it is unavailable at runtime, DeChord falls back to `madmom` so the app remains usable.
-
-Runtime settings can be overridden with environment variables:
-
-- `DECHORD_CHORD_ENGINE=lv-chordia`, `madmom`, or `auto`
-- `DECHORD_CHORD_DICT=submission`, `ismir2017`, or `full`
-- `DECHORD_ANIMATE_CHORDS=false` by default. Set to `true` only if you want optional chord-lane slide animation.
-
-## How to Use
-
-### Loading an Audio File
-
-- Click the **Open** button or use the **drag and drop** feature to load an audio file.
-- Supported formats: `.wav`, `.mp3`, `.m4a`, `.aac`.
-
-### Playback Controls
-
-- **Play/Pause:** Use the play/pause button to start or pause the audio.
-- **Seek:** Use the forward and backward buttons to seek 10 seconds ahead or back.
-- **Mute:** Click the mute button to mute or unmute the audio.
-- **Volume Control:** Adjust the volume using the slider.
-- **Progress Slider:** Drag the slider to move to a different part of the audio file.
-
-### Chord and Key Recognition
-
-- The application will automatically start recognizing chords and the key when an audio file is loaded.
-- The recognized chords will be displayed in real-time as the audio plays.
-- The detected key will be displayed above the playback controls.
-
-### Exporting Chords
-
-- Click the **Save Chords** button to export the recognized chord timeline to text, CSV, and JSON.
-
-### Toggling Theme
-
-- Click the **Theme** button to switch between dark and light themes.
-
-### Redirect to GitHub
-
-- Click the **GitHub** button to open the project's GitHub repository in your web browser.
-
-### Keyboard Shortcuts
-
-- **Esc:** Close the application
-- **-:** Minimize the application
-- **T:** Toggle theme
-- **P:** Play/Pause
-- **Left Arrow:** Seek backward
-- **Right Arrow:** Seek forward
-- **M:** Mute/Unmute
-- **O:** Open audio file
-- **E:** Export chords
-- **R:** Redirect to GitHub
-
-## Code Structure
-
-### Main Files and Directories
-
-- **main.py:** The entry point of the application.
-- **interface.py:** Contains the GUI layout and setup.
-- **chords.py:** Functions and classes related to chord recognition.
-- **chord_engines.py:** Engine selection and fallback logic for `lv-chordia` and `madmom`.
-- **advanced_chord_worker.py:** Isolated subprocess worker for the PyTorch-based `lv-chordia` engine.
-- **key.py:** Functions and classes related to key recognition.
-- **icons/:** Directory containing icon files.
-- **export/:** Directory where exported chord files are saved.
-
-### Key Classes
-
-- **KeyRecognitionThread:** A thread for performing key recognition.
-- **ChordRecognitionThread:** A thread for performing chord recognition.
-- **Ui_MainWindow:** The class is for the application's user interface.
-- **MainWindow:** The main window class for every other class's integration and features.
-
-### Exception Handling
-
-- A custom exception handler is set up to handle and print exceptions, making debugging easier.
-
-## Customizing the Application
-
-### Adding New Features
-
-To add new features, you can extend the existing classes or add new ones. Ensure to update the GUI (`interface.py`) and connect the new functionalities appropriately.
-
-For the chord-recognition product plan, see [ROADMAP.md](ROADMAP.md).
-
-### Modifying the Theme
-
-To modify the themes, you can update the `dark_theme` and `light_theme` stylesheets in the `theme.py` file.
-
-## Contributing
-
-### Reporting Issues
-
-If you find any bugs or issues, please report them in the [Issues](https://github.com/chinmaykrishnroy/dechord/issues) section of the GitHub repository.
-
-### Pull Requests
-
-I welcome contributions! Please fork the repository and create a pull request with your changes. Ensure your code follows the existing coding style and includes appropriate documentation and tests.
-
-### Coding Standards
-
-- Follow PEP 8 guidelines for Python code.
-- Document your code using docstrings.
-- Write meaningful commit messages.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgements
-
-### Libraries and Tools
-
-- **lv-chordia:** For large-vocabulary chord recognition.
-- **madmom:** For music signal processing algorithms and fallback chord recognition.
-- **PyQt5:** For the GUI framework.
-- **Python:** The programming language used.
-
-### Inspiration
-
-This project is inspired by the need for a user-friendly tool for musicians to analyze and learn music through real-time key and chord recognition.
-
-## Contact
-
-For any questions or suggestions, feel free to open an issue on the GitHub repository or contact the maintainer directly.
-
----
-
-Thank you for using DeChord! I hope it helps you in your musical journey.
-
-## More Images
-
-![Screenshot (14)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/92275a84-39f8-4926-9073-7db6b6a7de64)
-![Screenshot (13)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/e70cf1ca-ff69-4c2d-8637-0caecbdeb4d5)
-![Screenshot (11)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/50380852-ba6c-4ca6-a49c-4970c0cb37f2)
-![Screenshot (10)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/a5174ab7-70ab-4821-84a8-868b89591d7c)
-![Screenshot (9)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/3e167d19-e7a2-4e90-a519-bf59db37ce41)
-![Screenshot (7)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/cba3a277-589c-4499-9c5f-31e7d722b0a0)
-![Screenshot (6)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/318b373d-1896-4549-9d0a-7b9a290b9744)
-![Screenshot (5)](https://github.com/chinmaykrishnroy/DeChord/assets/65699140/09d12110-2b0c-4de9-bf04-4eedbca234f5)
-![image](https://github.com/user-attachments/assets/8c1966eb-27f2-4a5f-9cc4-b1ea8785847b)
+The original PyQt application remains under `legacy_desktop`; root `run.bat` and `run.sh` still launch it. See [legacy_desktop/README.md](legacy_desktop/README.md). Project code is MIT licensed; review dependency, model, and sample-asset licenses before redistribution.

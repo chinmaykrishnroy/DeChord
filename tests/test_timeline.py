@@ -1,6 +1,6 @@
 import unittest
 
-from timeline import chord_index_at_position
+from legacy_desktop.timeline import chord_index_at_position
 
 
 class TimelineTest(unittest.TestCase):

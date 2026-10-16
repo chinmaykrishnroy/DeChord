@@ -1,6 +1,6 @@
 import unittest
 
-from export_utils import build_chord_export_rows
+from legacy_desktop.export_utils import build_chord_export_rows
 
 
 def fake_format_time(seconds):
@@ -24,7 +24,7 @@ class ExportUtilsTest(unittest.TestCase):
                 {
                     "start": "0.0s",
                     "end": "1.5s",
-                    "label": "Cmaj7/E",
+                    "label": "CM7/E",
                     "quality": "Major seventh",
                     "notes": "C E G B",
                     "bass": "E",

@@ -1,0 +1,2 @@
+-r requirements-backend.txt
+httpx>=0.28,<1

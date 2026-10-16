@@ -1,48 +1,44 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-:: --- Always run from this script's folder
 set "PROJECT_DIR=%~dp0"
 pushd "%PROJECT_DIR%"
 
-:: --- Pick a Python (prefer the launcher)
 set "PYEXE="
 where /q py  && set "PYEXE=py -3"
 if not defined PYEXE (
   where /q python && set "PYEXE=python"
 )
 if not defined PYEXE (
-  echo [DeChord] ERROR: Python 3 not found in PATH.
+  echo [DeChord Legacy] ERROR: Python 3 not found in PATH.
   popd & exit /b 1
 )
 
-:: --- Paths
 set "VENV_DIR=%PROJECT_DIR%venv"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
-set "STAMP_FILE=%VENV_DIR%\.req_hash"
-set "REQ_FILE=%PROJECT_DIR%requirements.txt"
+set "STAMP_FILE=%VENV_DIR%\.legacy_req_hash"
+set "REQ_FILE=%PROJECT_DIR%legacy_desktop\requirements.txt"
+set "LEGACY_APP=%PROJECT_DIR%legacy_desktop\main.py"
 
-:: --- Create venv if missing
 if not exist "%VENV_PY%" (
-  echo [DeChord] Creating virtual environment...
+  echo [DeChord Legacy] Creating shared virtual environment...
   %PYEXE% -m venv "%VENV_DIR%"
   if errorlevel 1 (
-    echo [DeChord] ERROR: venv creation failed.
+    echo [DeChord Legacy] ERROR: venv creation failed.
     popd & exit /b 1
   )
 )
 
-:: --- Activate venv
 call "%VENV_DIR%\Scripts\activate.bat"
 if errorlevel 1 (
-  echo [DeChord] ERROR: failed to activate venv.
+  echo [DeChord Legacy] ERROR: failed to activate venv.
   popd & exit /b 1
 )
 
-:: --- Keep packaging tools fresh (quietly); setuptools<82 keeps the advanced torch stack satisfied.
+set "PYTHONPATH=%PROJECT_DIR%;%PROJECT_DIR%legacy_desktop;%PYTHONPATH%"
+
 python -m pip install --upgrade pip wheel "setuptools<82" >nul 2>&1
 
-:: --- Compute a stamp: python/pip versions + requirements content (single-line Python)
 set "NEWHASH="
 for /f "usebackq delims=" %%H in (`
   python -c "import hashlib,os,subprocess as sp; v=lambda *c: sp.check_output(c,stderr=sp.STDOUT).decode().strip(); d=(v('python','-V')+'\n'+v('python','-m','pip','-V')+'\n').encode(); p=r'%REQ_FILE%'; d+=open(p,'rb').read() if os.path.isfile(p) else b''; print(hashlib.sha256(d).hexdigest())"
@@ -59,33 +55,29 @@ if not exist "%STAMP_FILE%" (
 )
 
 if defined NEED_INSTALL (
-  if exist "%REQ_FILE%" (
-    echo [DeChord] Installing / verifying dependencies...
-    python -m pip install -r "%REQ_FILE%"
-    if errorlevel 1 (
-      echo [DeChord] ERROR: dependency install failed.
-      if exist "%STAMP_FILE%" del /q "%STAMP_FILE%" >nul 2>&1
-      goto :RUNAPP
-    )
+  echo [DeChord Legacy] Installing / verifying legacy dependencies in shared venv...
+  python -m pip install -r "%REQ_FILE%"
+  if errorlevel 1 (
+    echo [DeChord Legacy] ERROR: dependency install failed.
+    if exist "%STAMP_FILE%" del /q "%STAMP_FILE%" >nul 2>&1
+    goto :RUNAPP
   )
   >"%STAMP_FILE%" echo %NEWHASH%
 ) else (
-  echo [DeChord] Dependencies already satisfied. Skipping install.
+  echo [DeChord Legacy] Dependencies already satisfied. Skipping install.
 )
 
-echo [DeChord] Preparing audio decoder...
-python -c "from audio_runtime import ensure_ffmpeg_available; raise SystemExit(0 if ensure_ffmpeg_available() else 1)"
+echo [DeChord Legacy] Preparing audio decoder...
+python -c "from legacy_desktop.audio_runtime import ensure_ffmpeg_available; raise SystemExit(0 if ensure_ffmpeg_available() else 1)"
 if errorlevel 1 (
-  echo [DeChord] WARNING: FFmpeg could not be prepared. MP3/M4A/AAC analysis may fail.
+  echo [DeChord Legacy] WARNING: FFmpeg could not be prepared. MP3/M4A/AAC analysis may fail.
 )
 
 :RUNAPP
-echo [DeChord] Starting app...
-python "%PROJECT_DIR%main.py"
+echo [DeChord Legacy] Starting PyQt5 app...
+python "%LEGACY_APP%"
 set "STATUS=%ERRORLEVEL%"
 
-:: --- Deactivate venv if available (ignore errors)
 deactivate >nul 2>&1
-
 popd
 exit /b %STATUS%

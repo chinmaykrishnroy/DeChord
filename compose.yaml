@@ -1,0 +1,14 @@
+services:
+  dechord:
+    image: ghcr.io/chinmaykrishnroy/dechord:1.0.0
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - practice:/data
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  practice:

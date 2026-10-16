@@ -1,0 +1,10 @@
+{
+  "bundle": {
+    "windows": {
+      "webviewInstallMode": { "type": "offlineInstaller" }
+    },
+    "resources": {
+      "resources/engine/": "engine/"
+    }
+  }
+}

@@ -6,3 +6,17 @@ venv/
 .venv/
 *.log
 *.lnk
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/src-tauri/target/
+frontend/*.tsbuildinfo
+.audit-tmp/
+.assessment/
+frontend/audit-current.json
+.venv-release/
+build/
+dist/
+frontend/src-tauri/resources/
+playwright-report/
+test-results/

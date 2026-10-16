@@ -1,0 +1,1314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeChord Engine Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #071011;
+      --panel: #101828;
+      --panel-2: #151d33;
+      --panel-3: #1b2338;
+      --line: rgba(255, 255, 255, 0.11);
+      --text: #f5f7fb;
+      --muted: #9aa7ba;
+      --accent: #68e1fd;
+      --accent-2: #a88cff;
+      --good: #36d399;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --radius: 8px;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(104, 225, 253, 0.06), transparent 340px),
+        radial-gradient(circle at 80% 12%, rgba(168, 140, 255, 0.14), transparent 300px),
+        var(--bg);
+      color: var(--text);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: linear-gradient(180deg, #26314c, #1b243a);
+      color: var(--text);
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    button:hover {
+      border-color: rgba(104, 225, 253, 0.62);
+      transform: translateY(-1px);
+    }
+
+    button.primary {
+      background: linear-gradient(180deg, #4e7fff, #315be8);
+      border-color: rgba(104, 225, 253, 0.55);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+      transform: none;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(5, 10, 16, 0.58);
+      color: var(--text);
+      border-radius: 7px;
+      padding: 0 11px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: rgba(104, 225, 253, 0.72);
+      box-shadow: 0 0 0 3px rgba(104, 225, 253, 0.12);
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    audio {
+      width: 100%;
+      height: 38px;
+    }
+
+    .player-shell {
+      position: relative;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .player-shell.locked audio {
+      opacity: 0.36;
+      pointer-events: none;
+    }
+
+    .player-lock {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      background: rgba(3, 7, 10, 0.68);
+      color: #dbe8f4;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .player-shell.locked .player-lock {
+      display: flex;
+    }
+
+    .app {
+      width: min(1440px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 32px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #68e1fd, #a88cff);
+      color: #061014;
+      font-weight: 900;
+      box-shadow: var(--shadow);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 28px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--warn);
+    }
+
+    .dot.ok {
+      background: var(--good);
+    }
+
+    .dot.bad {
+      background: var(--bad);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(310px, 380px) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(21, 29, 51, 0.94), rgba(11, 17, 27, 0.94));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .panel-header h2 {
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .dropzone {
+      display: grid;
+      place-items: center;
+      min-height: 150px;
+      border: 1px dashed rgba(104, 225, 253, 0.45);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(104, 225, 253, 0.08), rgba(168, 140, 255, 0.08)),
+        rgba(5, 10, 16, 0.48);
+      text-align: center;
+      padding: 18px;
+      transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--good);
+      background: rgba(54, 211, 153, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .dropzone strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .dropzone span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .hidden-input {
+      display: none;
+    }
+
+    .meta-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.045);
+      border-radius: 7px;
+      padding: 12px;
+      min-height: 76px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .metric strong {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 18px;
+    }
+
+    .progress {
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+      overflow: hidden;
+    }
+
+    .progress > div {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 220ms ease;
+    }
+
+    .timeline {
+      position: relative;
+      min-height: 128px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 48px),
+        rgba(4, 9, 13, 0.64);
+      overflow: hidden;
+    }
+
+    .segment {
+      position: absolute;
+      top: 16px;
+      bottom: 16px;
+      min-width: 2px;
+      border-right: 1px solid rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 13px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      white-space: nowrap;
+    }
+
+    .chord-deck {
+      display: grid;
+      grid-template-columns: minmax(78px, 0.72fr) minmax(126px, 1.12fr) minmax(78px, 0.72fr);
+      align-items: center;
+      gap: 10px;
+      min-height: 136px;
+    }
+
+    .chord-tile {
+      display: grid;
+      place-items: center;
+      min-height: 88px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 8px;
+      background: #2a1535;
+      color: white;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-align: center;
+      overflow: hidden;
+      padding: 8px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .chord-tile.side {
+      min-height: 74px;
+      opacity: 0.78;
+      font-size: clamp(18px, 2.2vw, 30px);
+    }
+
+    .chord-tile.current {
+      min-height: 116px;
+      transform: translateY(-4px);
+      font-size: clamp(32px, 5.2vw, 64px);
+      background: linear-gradient(180deg, #6a1c6f, #3a144d);
+    }
+
+    .chord-detail {
+      margin-top: 8px;
+      min-height: 22px;
+      color: #d8f6ff;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .empty {
+      display: grid;
+      place-items: center;
+      min-height: 118px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.035);
+      text-align: center;
+      padding: 16px;
+    }
+
+    .batches {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      max-height: 340px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .batch-card {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.045);
+      border-radius: 7px;
+      padding: 11px;
+      min-height: 116px;
+    }
+
+    .batch-card h3 {
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(104, 225, 253, 0.11);
+      color: #c9f6ff;
+      border: 1px solid rgba(104, 225, 253, 0.18);
+      font-size: 12px;
+    }
+
+    .route-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .console {
+      height: 330px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #03070a;
+      color: #cceef5;
+      padding: 12px;
+      font: 12px/1.5 "Cascadia Code", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      max-height: 360px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .spacer {
+      height: 16px;
+    }
+
+    @media (max-width: 980px) {
+      .layout,
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .meta-strip {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">DC</div>
+        <div>
+          <h1>DeChord Engine Lab</h1>
+          <p class="subtle">Local backend tester for import, upload, analysis jobs, batches, timelines, corrections, and exports.</p>
+        </div>
+      </div>
+      <div class="status-pill"><span id="healthDot" class="dot"></span><span id="healthText">Not checked</span></div>
+    </header>
+
+    <section class="layout">
+      <aside class="stack">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Analysis Mode</h2>
+            <span class="status-pill" id="jobStatus">No job</span>
+          </div>
+          <div class="panel-body stack">
+            <label>
+              Mode
+              <select id="modeSelect">
+                <option value="full_song" selected>Full song</option>
+                <option value="batched">Batched pieces</option>
+                <option value="preview">Preview first seconds</option>
+                <option value="practice">Practice timeline</option>
+              </select>
+            </label>
+            <label id="previewField" style="display:none">
+              Preview seconds
+              <input id="previewSeconds" type="number" min="5" step="1" value="30">
+            </label>
+            <label id="batchField" style="display:none">
+              Batch seconds
+              <input id="batchSeconds" type="number" min="5" step="1" value="30">
+            </label>
+            <label>
+              Cache behavior
+              <select id="forceSelect">
+                <option value="false">Reuse cached result</option>
+                <option value="true">Force recompute</option>
+              </select>
+            </label>
+            <p id="modeHint" class="subtle">Choose the analysis mode before selecting or dropping audio. Analysis starts automatically.</p>
+            <div class="progress"><div id="progressFill"></div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Audio Input</h2>
+            <button id="healthBtn">Health</button>
+          </div>
+          <div class="panel-body stack">
+            <input id="fileInput" class="hidden-input" type="file" accept="audio/*,.mp3,.wav,.flac,.m4a,.aac,.ogg">
+            <div id="dropzone" class="dropzone" tabindex="0">
+              <div>
+                <strong>Select or drop audio</strong>
+                <span>Uploads and starts analysis automatically</span>
+              </div>
+            </div>
+            <div id="playerShell" class="player-shell locked">
+              <audio id="audioPreview" preload="metadata"></audio>
+              <div id="playerLock" class="player-lock">Analyze chords to unlock playback.</div>
+            </div>
+            <label>
+              Import by local path
+              <input id="pathInput" placeholder="C:\Users\apurv\Downloads\Die With A Smile.mp3">
+            </label>
+            <button id="pathImportBtn">Import Path</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Corrections</h2>
+          </div>
+          <div class="panel-body stack">
+            <div class="grid-2">
+              <label>Start <input id="correctionStart" type="number" min="0" step="0.1" value="0"></label>
+              <label>End <input id="correctionEnd" type="number" min="0" step="0.1" value="4"></label>
+            </div>
+            <label>Chord label <input id="correctionLabel" placeholder="G:7"></label>
+            <div class="grid-2">
+              <button id="addCorrectionBtn" disabled>Add</button>
+              <button id="saveCorrectionsBtn" disabled>Save</button>
+            </div>
+            <div id="correctionList" class="chip-row"></div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="stack">
+        <section class="meta-strip">
+          <div class="metric"><span>Song</span><strong id="songTitle">None</strong></div>
+          <div class="metric"><span>Duration</span><strong id="songDuration">--</strong></div>
+          <div class="metric"><span>Key</span><strong id="songKey">--</strong></div>
+          <div class="metric"><span>Tempo</span><strong id="songTempo">--</strong></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Playback Chords</h2>
+            <button id="pipBtn" disabled>Open PiP</button>
+          </div>
+          <div class="panel-body">
+            <div class="chord-deck">
+              <div id="previousChord" class="chord-tile side">--</div>
+              <div id="currentChord" class="chord-tile current">--</div>
+              <div id="nextChord" class="chord-tile side">--</div>
+            </div>
+            <div id="currentChordDetail" class="chord-detail">Analyze chords to enable playback.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Chord Timeline</h2>
+            <button id="jobTimelineBtn" disabled>Refresh Job Timeline</button>
+          </div>
+          <div class="panel-body">
+            <div id="timeline" class="timeline"><div class="empty">No timeline yet</div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Batch Results</h2>
+            <button id="batchesBtn" disabled>Refresh Batches</button>
+          </div>
+          <div class="panel-body">
+            <div id="batches" class="batches"><div class="empty">No batches yet</div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Route Tester</h2>
+            <button id="clearLogBtn">Clear Log</button>
+          </div>
+          <div class="panel-body stack">
+            <div class="route-grid">
+              <button data-route="health">GET /health</button>
+              <button data-route="upload">POST /songs/upload</button>
+              <button data-route="import">POST /songs/import</button>
+              <button data-route="createJob">POST /analysis/jobs</button>
+              <button data-route="getJob">GET /analysis/jobs/{id}</button>
+              <button data-route="getBatches">GET /analysis/jobs/{id}/batches</button>
+              <button data-route="getJobTimeline">GET /analysis/jobs/{id}/timeline</button>
+              <button data-route="getSongTimeline">GET /songs/{id}/timeline</button>
+              <button data-route="saveCorrections">POST /songs/{id}/corrections</button>
+              <button data-route="exportChords">GET /songs/{id}/exports/chords</button>
+            </div>
+            <div id="console" class="console"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Export Rows</h2>
+            <button id="exportBtn" disabled>Refresh Export</button>
+          </div>
+          <div class="panel-body">
+            <div id="exportTable" class="table-wrap"><div class="empty">No export rows yet</div></div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const apiBase = location.protocol === "file:" ? "http://127.0.0.1:8765" : location.origin;
+    const state = {
+      file: null,
+      song: null,
+      job: null,
+      corrections: [],
+      polling: null,
+      audioUrl: null,
+      segments: [],
+      analyzedUntil: 0,
+      waitingForBatch: false,
+      playbackUnlocked: false,
+      autoPlayAttempted: false,
+      pipWindow: null
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const audio = $("audioPreview");
+    const terminalStatuses = new Set(["completed", "failed", "cancelled"]);
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function log(title, payload) {
+      const stamp = new Date().toLocaleTimeString();
+      const text = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
+      $("console").textContent = `[${stamp}] ${title}\n${text}\n\n` + $("console").textContent;
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(`${apiBase}${path}`, options);
+      const text = await response.text();
+      let payload;
+      try {
+        payload = text ? JSON.parse(text) : {};
+      } catch {
+        payload = text;
+      }
+      if (!response.ok) {
+        throw new Error(typeof payload === "string" ? payload : JSON.stringify(payload));
+      }
+      return payload;
+    }
+
+    function secondsLabel(value) {
+      if (!Number.isFinite(value)) return "--";
+      const minutes = Math.floor(value / 60);
+      const seconds = Math.round(value % 60).toString().padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    }
+
+    function colorFor(label) {
+      let hash = 0;
+      for (const char of String(label || "N")) hash = ((hash << 5) - hash) + char.charCodeAt(0);
+      const hue = Math.abs(hash) % 360;
+      return `linear-gradient(180deg, hsl(${hue} 70% 42%), hsl(${hue} 72% 28%))`;
+    }
+
+    function setHealth(ok, text) {
+      $("healthDot").className = `dot ${ok ? "ok" : "bad"}`;
+      $("healthText").textContent = text;
+    }
+
+    function setSong(song) {
+      state.song = song;
+      $("songTitle").textContent = song.title || song.id;
+      $("songDuration").textContent = secondsLabel(song.duration);
+      $("addCorrectionBtn").disabled = false;
+      $("saveCorrectionsBtn").disabled = false;
+      setDurationBounds(song.duration);
+    }
+
+    function setDurationBounds(duration) {
+      const max = Math.max(5, Math.floor(duration || 120));
+      for (const id of ["previewSeconds", "batchSeconds"]) {
+        const input = $(id);
+        input.max = String(max);
+        input.value = String(Math.min(Number(input.value || 30), max));
+      }
+    }
+
+    function setJob(job) {
+      state.job = job;
+      $("jobStatus").textContent = job ? `${job.mode} / ${job.status}` : "No job";
+      $("songKey").textContent = job?.key_label || "--";
+      $("songTempo").textContent = job?.tempo_bpm ? `${Number(job.tempo_bpm).toFixed(1)} BPM` : "--";
+      $("progressFill").style.width = `${Math.round((job?.progress || 0) * 100)}%`;
+      $("batchesBtn").disabled = !job;
+      $("jobTimelineBtn").disabled = !job;
+      $("exportBtn").disabled = !state.song;
+      setModeControlsDisabled(Boolean(job && !terminalStatuses.has(job.status)));
+    }
+
+    function setModeControlsDisabled(disabled) {
+      $("modeSelect").disabled = disabled;
+      $("previewSeconds").disabled = disabled;
+      $("batchSeconds").disabled = disabled;
+      $("forceSelect").disabled = disabled;
+      if (disabled) {
+        $("modeHint").textContent = "Analysis is running. Mode controls are locked until this job finishes.";
+        return;
+      }
+      updateModeUi();
+    }
+
+    function updateModeUi() {
+      const mode = $("modeSelect").value;
+      $("previewField").style.display = mode === "preview" ? "grid" : "none";
+      $("batchField").style.display = mode === "batched" ? "grid" : "none";
+      const hints = {
+        full_song: "Full-song analysis gives the cleanest single timeline and is the default.",
+        batched: "Batched analysis streams early chords. Playback pauses at a batch boundary if the next batch is not ready yet.",
+        preview: "Preview only analyzes the first seconds for quick recommendations.",
+        practice: "Practice uses cached analysis plus saved corrections. It is useful after editing a song timeline."
+      };
+      $("modeHint").textContent = `${hints[mode]} Select or drop audio to upload and analyze automatically.`;
+    }
+
+    function lockPlayback(reason = "Analyze chords to unlock playback.") {
+      state.segments = [];
+      state.analyzedUntil = 0;
+      state.waitingForBatch = false;
+      state.playbackUnlocked = false;
+      state.autoPlayAttempted = false;
+      audio.controls = false;
+      $("playerShell").classList.add("locked");
+      $("playerLock").textContent = reason;
+      $("pipBtn").disabled = true;
+      setChordTiles(null, null, null);
+      $("currentChordDetail").textContent = reason;
+      updatePip();
+    }
+
+    function unlockPlayback(segments, source) {
+      const merged = mergeSegments(segments);
+      if (!merged.length) return;
+      const previousAnalyzedUntil = state.analyzedUntil;
+      state.segments = merged;
+      state.analyzedUntil = Math.max(...merged.map((segment) => segment.end || 0));
+      state.playbackUnlocked = Boolean(audio.src);
+      $("pipBtn").disabled = false;
+      if (audio.src) {
+        audio.controls = true;
+        $("playerShell").classList.remove("locked");
+        $("playerLock").textContent = "";
+        if (state.waitingForBatch && state.analyzedUntil > audio.currentTime + 0.35) {
+          state.waitingForBatch = false;
+          tryAutoPlayback("next batch", true);
+        } else {
+          tryAutoPlayback(source);
+        }
+      } else {
+        audio.controls = false;
+        $("playerShell").classList.add("locked");
+        $("playerLock").textContent = "Chords are ready. Select the audio file to enable browser playback.";
+      }
+      if (state.analyzedUntil > previousAnalyzedUntil) {
+        log("Analysis coverage", `Chord data available through ${secondsLabel(state.analyzedUntil)}.`);
+      }
+      syncChordDisplay();
+    }
+
+    function mergeSegments(segments) {
+      const byTime = new Map();
+      for (const segment of segments || []) {
+        if (!Number.isFinite(segment.start) || !Number.isFinite(segment.end)) continue;
+        byTime.set(`${segment.start}:${segment.end}:${segment.label}`, segment);
+      }
+      return Array.from(byTime.values()).sort((a, b) => a.start - b.start || a.end - b.end);
+    }
+
+    async function tryAutoPlayback(source, force = false) {
+      if ((!force && state.autoPlayAttempted) || !audio.src) return;
+      if (!force) state.autoPlayAttempted = true;
+      try {
+        await audio.play();
+        log("Playback started", `Audio started after ${source} chord data became available.`);
+      } catch (error) {
+        log("Playback ready", "The browser blocked automatic playback. Press play; chord tiles are unlocked.");
+      }
+    }
+
+    function segmentIndexAt(time) {
+      return state.segments.findIndex((segment) => segment.start <= time && time < segment.end);
+    }
+
+    function syncChordDisplay() {
+      if (!state.segments.length) {
+        setChordTiles(null, null, null);
+        return;
+      }
+      const time = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      if (!audio.paused && state.job && !terminalStatuses.has(state.job.status) && time >= state.analyzedUntil - 0.15) {
+        audio.pause();
+        state.waitingForBatch = true;
+        $("currentChordDetail").textContent = "Waiting for the next analyzed batch...";
+        log("Playback paused", "Playback reached the analyzed batch boundary and will resume when the next batch arrives.");
+        return;
+      }
+      let index = segmentIndexAt(time);
+      if (index < 0) {
+        index = state.segments.findIndex((segment) => segment.end > time);
+        if (index < 0) index = state.segments.length - 1;
+      }
+      const previous = state.segments[index - 1] || null;
+      const current = state.segments[index] || null;
+      const next = state.segments[index + 1] || null;
+      setChordTiles(previous, current, next);
+      updatePip(previous, current, next);
+    }
+
+    function setChordTiles(previous, current, next) {
+      $("previousChord").textContent = previous?.label || "--";
+      $("currentChord").textContent = current?.label || "--";
+      $("nextChord").textContent = next?.label || "--";
+      $("currentChord").style.background = current ? colorFor(current.label) : "linear-gradient(180deg, #6a1c6f, #3a144d)";
+      $("previousChord").style.background = previous ? colorFor(previous.label) : "#2a1535";
+      $("nextChord").style.background = next ? colorFor(next.label) : "#2a1535";
+      $("currentChordDetail").textContent = current
+        ? `${current.quality || "Chord"} | Notes: ${(current.notes || []).join(" ") || "--"} | ${current.start.toFixed(2)}s - ${current.end.toFixed(2)}s`
+        : "Analyze chords to enable playback.";
+    }
+
+    function openPip() {
+      state.pipWindow = window.open("", "DeChordChordMonitor", "width=460,height=280,resizable=yes");
+      if (!state.pipWindow) {
+        log("Open PiP failed", "The browser blocked the popup window.");
+        return;
+      }
+      state.pipWindow.document.write(`
+        <!doctype html><html><head><title>DeChord Chords</title>
+        <style>
+          body{margin:0;background:#050c0d;color:white;font-family:Inter,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh}
+          .wrap{width:100%;padding:18px;box-sizing:border-box}
+          .row{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:8px;align-items:center}
+          .tile{display:grid;place-items:center;min-height:76px;border-radius:8px;background:#2a1535;font-weight:900;font-size:28px;overflow:hidden}
+          .current{min-height:118px;font-size:58px;background:#5b155f}
+          .detail{text-align:center;color:#c9f6ff;margin-top:12px;font-size:13px}
+        </style></head><body>
+        <div class="wrap"><div class="row">
+          <div id="pipPrev" class="tile">--</div>
+          <div id="pipCurrent" class="tile current">--</div>
+          <div id="pipNext" class="tile">--</div>
+        </div><div id="pipDetail" class="detail">Waiting for playback</div></div>
+        </body></html>
+      `);
+      state.pipWindow.document.close();
+      syncChordDisplay();
+    }
+
+    function updatePip(previous = null, current = null, next = null) {
+      if (!state.pipWindow || state.pipWindow.closed) return;
+      const doc = state.pipWindow.document;
+      doc.getElementById("pipPrev").textContent = previous?.label || "--";
+      doc.getElementById("pipCurrent").textContent = current?.label || "--";
+      doc.getElementById("pipNext").textContent = next?.label || "--";
+      doc.getElementById("pipCurrent").style.background = current ? colorFor(current.label) : "#5b155f";
+      doc.getElementById("pipPrev").style.background = previous ? colorFor(previous.label) : "#2a1535";
+      doc.getElementById("pipNext").style.background = next ? colorFor(next.label) : "#2a1535";
+      doc.getElementById("pipDetail").textContent = current
+        ? `${current.quality || "Chord"} | ${(current.notes || []).join(" ") || "--"}`
+        : "Waiting for playback";
+    }
+
+    function renderTimeline(segments, duration) {
+      const host = $("timeline");
+      host.innerHTML = "";
+      if (!segments || !segments.length) {
+        host.innerHTML = '<div class="empty">No chord segments yet</div>';
+        return;
+      }
+      const maxEnd = Math.max(duration || 0, ...segments.map((segment) => segment.end || 0), 1);
+      for (const segment of segments) {
+        const item = document.createElement("div");
+        item.className = "segment";
+        item.style.left = `${Math.max(0, (segment.start / maxEnd) * 100)}%`;
+        item.style.width = `${Math.max(0.4, ((segment.end - segment.start) / maxEnd) * 100)}%`;
+        item.style.background = colorFor(segment.label);
+        item.title = `${segment.label} ${segment.start.toFixed(2)}s - ${segment.end.toFixed(2)}s`;
+        item.textContent = segment.label;
+        host.appendChild(item);
+      }
+    }
+
+    function renderBatches(batches) {
+      const host = $("batches");
+      host.innerHTML = "";
+      if (!batches || !batches.length) {
+        host.innerHTML = '<div class="empty">No batches yet</div>';
+        return;
+      }
+      for (const batch of batches) {
+        const card = document.createElement("div");
+        card.className = "batch-card";
+        const labels = (batch.segments || []).slice(0, 12).map((segment) => `<span class="chip">${escapeHtml(segment.label)}</span>`).join("");
+        card.innerHTML = `
+          <h3>Batch ${batch.batch_index} - ${escapeHtml(batch.status)}</h3>
+          <p class="subtle">${secondsLabel(batch.start)} to ${secondsLabel(batch.end)} | ${(batch.segments || []).length} chords | ${batch.elapsed_seconds ?? "--"}s analysis</p>
+          <div class="spacer"></div>
+          <div class="chip-row">${labels || '<span class="chip">Waiting</span>'}</div>
+        `;
+        host.appendChild(card);
+      }
+    }
+
+    function renderExport(rows) {
+      const host = $("exportTable");
+      if (!rows || !rows.length) {
+        host.innerHTML = '<div class="empty">No export rows yet</div>';
+        return;
+      }
+      const body = rows.map((row) => `
+        <tr>
+          <td>${escapeHtml(row.start)}</td>
+          <td>${escapeHtml(row.end)}</td>
+          <td><strong>${escapeHtml(row.chord)}</strong></td>
+          <td>${escapeHtml(row.quality)}</td>
+          <td>${escapeHtml(row.notes)}</td>
+          <td>${escapeHtml(row.source)}</td>
+        </tr>
+      `).join("");
+      host.innerHTML = `
+        <table>
+          <thead><tr><th>Start</th><th>End</th><th>Chord</th><th>Quality</th><th>Notes</th><th>Source</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+      `;
+    }
+
+    function renderCorrections() {
+      $("correctionList").innerHTML = state.corrections.map((correction, index) => `
+        <button class="chip" data-remove-correction="${index}">
+          ${escapeHtml(correction.start)}-${escapeHtml(correction.end)} ${escapeHtml(correction.label)}
+        </button>
+      `).join("") || '<span class="chip">No corrections staged</span>';
+    }
+
+    function pickFile(file) {
+      state.file = file;
+      if (state.audioUrl) URL.revokeObjectURL(state.audioUrl);
+      state.audioUrl = file ? URL.createObjectURL(file) : null;
+      audio.src = state.audioUrl || "";
+      if (state.segments.length) {
+        unlockPlayback(state.segments, "selected-file");
+      } else {
+        lockPlayback("Analyze chords to unlock playback.");
+      }
+      log("Selected file", file ? { name: file.name, size: file.size, type: file.type } : "No file");
+    }
+
+    async function selectAndAnalyze(file) {
+      if (!file) return;
+      pickFile(file);
+      await uploadSelected();
+      await createJob();
+    }
+
+    async function healthCheck() {
+      try {
+        const data = await api("/health");
+        setHealth(true, "Backend online");
+        log("GET /health", data);
+      } catch (error) {
+        setHealth(false, "Backend offline");
+        log("GET /health failed", error.message);
+      }
+    }
+
+    async function uploadSelected() {
+      if (!state.file) throw new Error("Select an audio file first.");
+      const form = new FormData();
+      form.append("file", state.file);
+      const song = await api("/songs/upload", { method: "POST", body: form });
+      setSong(song);
+      lockPlayback("Upload complete. Analysis is starting...");
+      log("POST /songs/upload", song);
+      return song;
+    }
+
+    async function importPath() {
+      const path = $("pathInput").value.trim();
+      if (!path) throw new Error("Enter a local path first.");
+      const song = await api("/songs/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path })
+      });
+      setSong(song);
+      lockPlayback("Path imported. Analysis is starting...");
+      log("POST /songs/import", song);
+      await createJob();
+      return song;
+    }
+
+    async function createJob() {
+      if (!state.song) throw new Error("Import or upload a song first.");
+      lockPlayback("Analysis running. Playback unlocks when chords are available.");
+      const mode = $("modeSelect").value;
+      const payload = {
+        song_id: state.song.id,
+        mode,
+        force: $("forceSelect").value === "true"
+      };
+      if (mode === "preview") payload.preview_seconds = Number($("previewSeconds").value || 30);
+      if (mode === "batched") {
+        const requestedBatchSeconds = Number($("batchSeconds").value || 30);
+        if (state.song?.duration && requestedBatchSeconds >= state.song.duration) {
+          payload.mode = "full_song";
+          log("Mode fallback", "Batch size is greater than or equal to song duration, so full-song analysis will be used.");
+        } else {
+          payload.batch_seconds = requestedBatchSeconds;
+        }
+      }
+
+      const job = await api("/analysis/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      setJob(job);
+      log("POST /analysis/jobs", job);
+      if (terminalStatuses.has(job.status)) {
+        await refreshJobTimeline();
+        await refreshExport();
+      } else {
+        startPolling();
+      }
+      return job;
+    }
+
+    async function refreshJob() {
+      if (!state.job) throw new Error("Create a job first.");
+      const job = await api(`/analysis/jobs/${state.job.id}`);
+      setJob(job);
+      log("GET /analysis/jobs/{id}", job);
+      return job;
+    }
+
+    async function refreshBatches() {
+      if (!state.job) throw new Error("Create a job first.");
+      const data = await api(`/analysis/jobs/${state.job.id}/batches`);
+      renderBatches(data.batches);
+      const collected = data.batches.flatMap((batch) => batch.segments || []);
+      if (collected.length) {
+        renderTimeline(collected, state.song?.duration);
+        unlockPlayback(collected, "batch");
+      }
+      log("GET /analysis/jobs/{id}/batches", data);
+      return data;
+    }
+
+    async function refreshJobTimeline() {
+      if (!state.job) throw new Error("Create a job first.");
+      const data = await api(`/analysis/jobs/${state.job.id}/timeline`);
+      renderTimeline(data.segments, data.song.duration);
+      unlockPlayback(data.segments, "timeline");
+      log("GET /analysis/jobs/{id}/timeline", data);
+      return data;
+    }
+
+    async function refreshSongTimeline() {
+      if (!state.song) throw new Error("Import or upload a song first.");
+      const data = await api(`/songs/${state.song.id}/timeline`);
+      renderTimeline(data.segments, data.song.duration);
+      unlockPlayback(data.segments, "song timeline");
+      setJob(data.job);
+      log("GET /songs/{id}/timeline", data);
+      return data;
+    }
+
+    async function saveCorrections() {
+      if (!state.song) throw new Error("Import or upload a song first.");
+      const data = await api(`/songs/${state.song.id}/corrections`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ corrections: state.corrections })
+      });
+      renderTimeline(data.segments, data.song.duration);
+      unlockPlayback(data.segments, "corrections");
+      log("POST /songs/{id}/corrections", data);
+      return data;
+    }
+
+    async function refreshExport() {
+      if (!state.song) throw new Error("Import or upload a song first.");
+      const data = await api(`/songs/${state.song.id}/exports/chords`);
+      renderExport(data.rows);
+      log("GET /songs/{id}/exports/chords", data);
+      return data;
+    }
+
+    function startPolling() {
+      if (state.polling) clearInterval(state.polling);
+      state.polling = setInterval(async () => {
+        try {
+          const job = await api(`/analysis/jobs/${state.job.id}`);
+          setJob(job);
+          const batchData = await api(`/analysis/jobs/${state.job.id}/batches`);
+          renderBatches(batchData.batches);
+          const collected = batchData.batches.flatMap((batch) => batch.segments || []);
+          if (collected.length) {
+            renderTimeline(collected, state.song?.duration);
+            unlockPlayback(collected, "batch");
+          }
+          if (terminalStatuses.has(job.status)) {
+            clearInterval(state.polling);
+            state.polling = null;
+            if (job.status === "completed") {
+              await refreshJobTimeline();
+              await refreshExport();
+            } else {
+              log("Job ended", job);
+            }
+          }
+        } catch (error) {
+          clearInterval(state.polling);
+          state.polling = null;
+          log("Polling failed", error.message);
+        }
+      }, 1400);
+    }
+
+    async function safeRun(title, fn) {
+      try {
+        return await fn();
+      } catch (error) {
+        log(`${title} failed`, error.message);
+      }
+    }
+
+    $("dropzone").addEventListener("click", () => $("fileInput").click());
+    $("dropzone").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") $("fileInput").click();
+    });
+    $("fileInput").addEventListener("change", (event) => safeRun("Select and analyze", () => selectAndAnalyze(event.target.files[0])));
+    $("pathImportBtn").addEventListener("click", () => safeRun("Import path", importPath));
+    $("healthBtn").addEventListener("click", healthCheck);
+    $("batchesBtn").addEventListener("click", () => safeRun("Refresh batches", refreshBatches));
+    $("jobTimelineBtn").addEventListener("click", () => safeRun("Refresh job timeline", refreshJobTimeline));
+    $("exportBtn").addEventListener("click", () => safeRun("Refresh export", refreshExport));
+    $("clearLogBtn").addEventListener("click", () => $("console").textContent = "");
+    $("pipBtn").addEventListener("click", openPip);
+    audio.addEventListener("timeupdate", syncChordDisplay);
+    audio.addEventListener("seeked", syncChordDisplay);
+    audio.addEventListener("play", syncChordDisplay);
+
+    $("modeSelect").addEventListener("change", updateModeUi);
+
+    $("addCorrectionBtn").addEventListener("click", () => {
+      const correction = {
+        start: Number($("correctionStart").value || 0),
+        end: Number($("correctionEnd").value || 0),
+        label: $("correctionLabel").value.trim()
+      };
+      if (!correction.label || correction.end <= correction.start) {
+        log("Correction rejected", "Use a valid label and end time greater than start time.");
+        return;
+      }
+      state.corrections.push(correction);
+      renderCorrections();
+    });
+
+    $("saveCorrectionsBtn").addEventListener("click", () => safeRun("Save corrections", saveCorrections));
+    $("correctionList").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-remove-correction]");
+      if (!button) return;
+      state.corrections.splice(Number(button.dataset.removeCorrection), 1);
+      renderCorrections();
+    });
+
+    for (const eventName of ["dragenter", "dragover"]) {
+      $("dropzone").addEventListener(eventName, (event) => {
+        event.preventDefault();
+        $("dropzone").classList.add("dragover");
+      });
+    }
+
+    for (const eventName of ["dragleave", "drop"]) {
+      $("dropzone").addEventListener(eventName, (event) => {
+        event.preventDefault();
+        $("dropzone").classList.remove("dragover");
+      });
+    }
+
+    $("dropzone").addEventListener("drop", async (event) => {
+      const file = event.dataTransfer.files[0];
+      if (!file) return;
+      await safeRun("Drop and analyze", () => selectAndAnalyze(file));
+    });
+
+    document.querySelector(".route-grid").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-route]");
+      if (!button) return;
+      const actions = {
+        health: healthCheck,
+        upload: uploadSelected,
+        import: importPath,
+        createJob,
+        getJob: refreshJob,
+        getBatches: refreshBatches,
+        getJobTimeline: refreshJobTimeline,
+        getSongTimeline: refreshSongTimeline,
+        saveCorrections,
+        exportChords: refreshExport
+      };
+      safeRun(button.dataset.route, actions[button.dataset.route]);
+    });
+
+    renderCorrections();
+    lockPlayback();
+    updateModeUi();
+    healthCheck();
+  </script>
+</body>
+</html>

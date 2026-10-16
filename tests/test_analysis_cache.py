@@ -2,8 +2,8 @@ import os
 import tempfile
 import unittest
 
-from analysis_cache import audio_content_hash, cache_file_for_audio
-from audio_runtime import playback_audio_path
+from legacy_desktop.analysis_cache import audio_content_hash, cache_file_for_audio
+from legacy_desktop.audio_runtime import playback_audio_path
 
 
 class AnalysisCacheTest(unittest.TestCase):
@@ -27,7 +27,9 @@ class AnalysisCacheTest(unittest.TestCase):
                 audio_file.write(b"same content")
 
             first_path = cache_file_for_audio(audio_path, tmp_dir, engine_id="engine-a")
-            second_path = cache_file_for_audio(audio_path, tmp_dir, engine_id="engine-b")
+            second_path = cache_file_for_audio(
+                audio_path, tmp_dir, engine_id="engine-b"
+            )
 
             self.assertNotEqual(first_path, second_path)
 
