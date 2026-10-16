@@ -70,6 +70,10 @@ def main():
         "librosa",
         "--collect-all",
         "numba",
+        # The optional TBB pool is unused by our CPU pipeline and requires a
+        # separate Intel runtime. Numba retains its OpenMP/workqueue backends.
+        "--exclude-module",
+        "numba.np.ufunc.tbbpool",
         "--collect-all",
         "llvmlite",
         "--collect-all",

@@ -37,7 +37,18 @@ def main():
         # On Windows, lazy torch import from the analysis thread can deadlock
         # while its native extension imports NumPy under the DLL loader lock.
         # Initialize the native runtimes in dependency order on the main thread.
-        for module in ("numpy", "torch", "lv_chordia"):
+        for module in (
+            "numpy",
+            "scipy.linalg",
+            "scipy.signal",
+            "scipy.ndimage",
+            "torch",
+            "librosa.core.audio",
+            "librosa.core.constantq",
+            "librosa.feature.spectral",
+            "librosa.feature.rhythm",
+            "lv_chordia",
+        ):
             print(f"Initializing {module}", file=sys.stderr, flush=True)
             importlib.import_module(module)
     import uvicorn
