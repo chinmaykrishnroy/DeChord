@@ -63,7 +63,10 @@ def main():
     if not 0 < args.port < 65536:
         parser.error("port must be between 1 and 65535")
     owner = OwnerState()
-    if args.owned:
+    # Frozen Windows DLL initialization can deadlock with a Python pipe-reader
+    # thread already running. Rust's JobObject owns the process during imports.
+    defer_owner_watch = os.name == "nt" and getattr(sys, "frozen", False)
+    if args.owned and not defer_owner_watch:
         threading.Thread(target=watch_owner, args=(owner,), daemon=True).start()
     resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
     if getattr(sys, "frozen", False):
@@ -107,6 +110,8 @@ def main():
         )
     )
     owner.bind(server)
+    if args.owned and defer_owner_watch:
+        threading.Thread(target=watch_owner, args=(owner,), daemon=True).start()
     if owner.should_exit:
         return
     server.run()

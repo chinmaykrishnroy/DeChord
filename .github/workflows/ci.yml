@@ -119,6 +119,9 @@ jobs:
       - if: runner.os == 'Windows'
         run: python scripts/package_portable.py
       - if: runner.os == 'Windows'
+        name: Verify ownership during cold native startup
+        run: ./scripts/smoke-startup-cancel.ps1 -Binary build/portable/DeChord/dechord.exe
+      - if: runner.os == 'Windows'
         run: python scripts/smoke_engine.py build/portable/DeChord/engine/dechord-engine.exe
       - if: runner.os == 'Windows'
         run: python scripts/smoke_desktop.py build/portable/DeChord/dechord.exe

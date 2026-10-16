@@ -62,6 +62,9 @@ desktop_entry.main()
     def test_idle_engine_exits_without_waiting_for_force_deadline(self):
         self.assertEqual(self.run_owned_child(busy=False), 0)
 
+    @unittest.skipIf(
+        os.name == "nt", "Frozen Windows startup is owned by the native JobObject"
+    )
     def test_engine_cannot_outlive_owner_during_cold_initialization(self):
         self.assertEqual(self.run_owned_child(busy=False, starting=True), 0)
 
