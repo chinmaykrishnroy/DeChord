@@ -17,6 +17,13 @@ Windows x64 installer/portable ZIP and Linux x86_64 AppImage/Debian packages inc
 
 The Windows installer includes offline WebView2 setup. The portable ZIP uses the system WebView2 runtime; choose the installer if that runtime is absent.
 
+On Ubuntu 24.04 or a compatible Debian-based system, install the `.deb` with `sudo apt install ./DeChord_1.0.0_amd64.deb` so system UI dependencies are resolved. The AppImage can also run without a FUSE mount, using the same path exercised in CI:
+
+```sh
+chmod +x DeChord_1.0.0_amd64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./DeChord_1.0.0_amd64.AppImage
+```
+
 The pipeline tests the frozen engine with actual inference and launches the desktop UI on Windows and Linux before publishing. SHA256SUMS.txt records the installer/package hashes. Binaries are unsigned; platform signing is not part of this release.
 
 ## Web
