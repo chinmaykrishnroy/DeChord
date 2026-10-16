@@ -23,7 +23,9 @@ def main():
         if os.name == "nt":
             environment["APPDATA"] = str(Path(folder) / "data")
             environment["LOCALAPPDATA"] = str(Path(folder) / "local")
-        child = subprocess.Popen([str(args.binary.resolve())], env=environment)
+        child = subprocess.Popen(
+            [str(args.binary.resolve())], env=environment, cwd=folder
+        )
         try:
             assert child.wait(timeout=90) == 0, "Desktop process failed"
         except subprocess.TimeoutExpired:
@@ -35,6 +37,13 @@ def main():
         )
         data = json.loads(report.read_text())
         assert data["frontend_ready"] and data["health"]["version"] == "1.0.0", data
+        assert (
+            Path(data["data_dir"]).resolve() == Path(folder, "engine-data").resolve()
+        ), data
+        assert Path(folder, "engine-data", "dechord_backend.sqlite3").is_file()
+        assert Path(folder, "webview").is_dir(), (
+            "Webview did not use the isolated profile"
+        )
         with socket.socket() as probe:
             probe.settimeout(1)
             assert probe.connect_ex(("127.0.0.1", data["port"])) != 0, (

@@ -3,7 +3,7 @@ use std::{
     fs::{self, OpenOptions},
     io::{Read, Write},
     net::{TcpListener, TcpStream},
-    path::Path,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::Mutex,
     thread,
@@ -21,6 +21,7 @@ pub struct Engine {
     pub connection: Connection,
     child: Mutex<Option<Child>>,
     port: u16,
+    data_dir: Option<PathBuf>,
     _group: Option<crate::process_group::Group>,
 }
 
@@ -34,6 +35,7 @@ impl Engine {
                 },
                 child: Mutex::new(None),
                 port: 8765,
+                data_dir: None,
                 _group: None,
             });
         }
@@ -53,7 +55,10 @@ impl Engine {
         if !binary.is_file() {
             return Err(format!("Bundled analysis engine is missing: {}", binary.display()).into());
         }
-        let data = app.path().app_data_dir()?;
+        let data = match crate::smoke_directory() {
+            Some(root) => root.join("engine-data"),
+            None => app.path().app_data_dir()?,
+        };
         fs::create_dir_all(&data)?;
         let log = OpenOptions::new()
             .create(true)
@@ -100,6 +105,7 @@ impl Engine {
             connection,
             child: Mutex::new(Some(child)),
             port,
+            data_dir: Some(data.clone()),
             _group: Some(group),
         };
         let deadline = Instant::now() + Duration::from_secs(45);
@@ -176,7 +182,7 @@ impl Engine {
             .as_ref()
             .ok_or("Smoke test requires a bundled engine")?
             .id();
-        let report = serde_json::json!({ "frontend_ready": true, "engine_pid": pid, "port": self.port, "health": health });
+        let report = serde_json::json!({ "frontend_ready": true, "engine_pid": pid, "port": self.port, "health": health, "data_dir": self.data_dir });
         fs::write(path, serde_json::to_vec_pretty(&report)?)?;
         Ok(())
     }

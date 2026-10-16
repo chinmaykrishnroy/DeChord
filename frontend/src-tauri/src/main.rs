@@ -6,6 +6,16 @@ use tauri::Manager;
 
 struct StartupError(String);
 
+fn smoke_directory() -> Option<std::path::PathBuf> {
+    std::env::var_os("DECHORD_SMOKE_REPORT").map(|report| {
+        std::path::Path::new(&report)
+            .parent()
+            .filter(|path| path.is_absolute())
+            .expect("DECHORD_SMOKE_REPORT must name an absolute file path")
+            .to_path_buf()
+    })
+}
+
 #[tauri::command]
 fn read_lyrics_file(path: String) -> Result<String, String> {
     let path = std::path::Path::new(&path);
@@ -25,8 +35,17 @@ fn read_lyrics_file(path: String) -> Result<String, String> {
 }
 
 fn main() {
+    let smoke_root = smoke_directory();
+    let mut context = tauri::generate_context!();
+    if smoke_root.is_some() {
+        // Windows known-folder APIs ignore APPDATA environment overrides.
+        // Build the test webview explicitly with a separate absolute profile.
+        for window in &mut context.config_mut().app.windows {
+            window.create = false;
+        }
+    }
     tauri::Builder::default()
-        .setup(|app| {
+        .setup(move |app| {
             match engine::Engine::start(app) {
                 Ok(engine) => {
                     app.manage(engine);
@@ -35,6 +54,17 @@ fn main() {
                     app.manage(StartupError(error.to_string()));
                 }
             }
+            if let Some(root) = &smoke_root {
+                let config = app
+                    .config()
+                    .app
+                    .windows
+                    .first()
+                    .ok_or("No app window configured")?;
+                tauri::WebviewWindowBuilder::from_config(app, config)?
+                    .data_directory(root.join("webview"))
+                    .build()?;
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -42,7 +72,7 @@ fn main() {
             engine::backend_connection,
             engine::desktop_ready
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("failed to start DeChord")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
