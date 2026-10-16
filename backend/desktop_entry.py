@@ -16,6 +16,32 @@ import time
 OWNER_EXIT_TIMEOUT_SECONDS = 5.0
 
 
+class OwnerState:
+    """Forward EOF to the server even when it arrives during native imports."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.server = None
+        self.exiting = False
+
+    @property
+    def should_exit(self):
+        with self.lock:
+            return self.exiting
+
+    @should_exit.setter
+    def should_exit(self, value):
+        with self.lock:
+            self.exiting = value
+            if self.server is not None:
+                self.server.should_exit = value
+
+    def bind(self, server):
+        with self.lock:
+            self.server = server
+            server.should_exit = self.exiting
+
+
 def watch_owner(server):
     # EOF cannot confuse a recycled OS process ID with our owner.
     sys.stdin.buffer.read()
@@ -36,6 +62,12 @@ def main():
     args = parser.parse_args()
     if not 0 < args.port < 65536:
         parser.error("port must be between 1 and 65535")
+    owner = OwnerState()
+    # Frozen Windows DLL initialization can deadlock with a Python pipe-reader
+    # thread already running. Rust's JobObject owns the process during imports.
+    defer_owner_watch = os.name == "nt" and getattr(sys, "frozen", False)
+    if args.owned and not defer_owner_watch:
+        threading.Thread(target=watch_owner, args=(owner,), daemon=True).start()
     resource_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
     if getattr(sys, "frozen", False):
         from backend.core.integrity import verify_models
@@ -77,8 +109,11 @@ def main():
             app, host="127.0.0.1", port=args.port, access_log=False, log_level="warning"
         )
     )
-    if args.owned:
-        threading.Thread(target=watch_owner, args=(server,), daemon=True).start()
+    owner.bind(server)
+    if args.owned and defer_owner_watch:
+        threading.Thread(target=watch_owner, args=(owner,), daemon=True).start()
+    if owner.should_exit:
+        return
     server.run()
 
 

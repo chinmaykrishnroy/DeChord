@@ -1,6 +1,6 @@
 services:
   dechord:
-    image: ghcr.io/chinmaykrishnroy/dechord:1.0.0
+    image: ghcr.io/chinmaykrishnroy/dechord:1.0.1
     ports:
       - "127.0.0.1:8765:8765"
     volumes:

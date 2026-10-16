@@ -14,6 +14,7 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import wave
+from release_version import release_version
 
 
 def main():
@@ -61,7 +62,7 @@ def main():
                 cwd=folder,
             )
             try:
-                deadline = time.monotonic() + 60
+                deadline = time.monotonic() + 180
                 while True:
                     try:
                         health = request("/health")
@@ -72,7 +73,7 @@ def main():
                                 (folder / "engine.log").read_text(errors="replace")
                             )
                         time.sleep(0.2)
-                assert health["version"] == "1.0.0", health
+                assert health["version"] == release_version(), health
                 try:
                     urlopen(base + "/songs", timeout=5)
                     raise AssertionError(

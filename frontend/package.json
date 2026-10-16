@@ -1,6 +1,6 @@
 {
   "name": "dechord-frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DeChord music practice studio for desktop and web.",
   "private": true,
   "scripts": {

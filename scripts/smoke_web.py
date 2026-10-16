@@ -8,6 +8,7 @@ import time
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 import wave
+from release_version import release_version
 
 
 def main():
@@ -29,7 +30,7 @@ def main():
             if time.monotonic() > deadline:
                 raise
             time.sleep(0.5)
-    assert health["version"] == "1.0.0", health
+    assert health["version"] == release_version(), health
     with urlopen(base, timeout=10) as response:
         assert b"DeChord" in response.read()
     assert request("/capabilities")["analysis_ready"]

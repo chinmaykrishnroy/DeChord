@@ -36,9 +36,13 @@ The smoke test requires a report sent by the rendered frontend after it has conn
 
 ## CI and publication
 
+Develop on `DEV` and open pull requests into `main`. Pushes to either branch and pull requests run GitHub Actions. Keep packaging, inference checks and release builds on the hosted runners when local storage or compute is limited.
+
 The workflow runs frontend formatting/unit/build checks, browser regressions, Python checks on Windows/Linux and Python 3.10/3.11, Windows/Linux native packaging and execution, and Docker build/inference tests on native amd64/arm64 runners. Browser traces/screenshots and desktop packages are retained as artifacts.
 
 Only a v1 tag whose version matches all manifests and whose commit is on main can publish. Publication waits for every required job, creates a multi-architecture image manifest, attaches the desktop artifacts and SHA256 checksums, and uses RELEASE_NOTES.md. A failed gate leaves the release unpublished. Source archives are provided by GitHub. Do not move an existing published version tag to repair a release.
+
+To reuse a successful CI build, dispatch **Publish verified packages** against the release tag with its successful **Verify and package** run ID. It verifies the source repository, all nine platform gates, unexpired artifacts, main ancestry and exact source-tree equality with the tag before publishing those packages. This avoids rebuilding the large engine solely to publish it. Cancel a redundant tag build when using this path; never run both publishers for the same tag.
 
 v0.1.1 intentionally identifies the legacy main commit before the Studio merge. Preserve that historical tag.
 

@@ -82,3 +82,8 @@ Verified locally on Windows on 15 October 2026. Base branch commit: `1d8396e5e7d
 The API test client needs loopback/socket permission on Windows. A sandbox run hung creating an asyncio socket pair; the same tests passed outside that restriction. The local runtime reuses the preexisting compatible madmom environment through an ignored `.venv` path file. This is not evidence of clean-machine engine installation.
 
 Remaining acceptance limits: no broad recognition accuracy benchmark, no physical musician fingering study, no audible pitch/tempo/loop quality certification, and no self-contained desktop installer test. Recent lv-chordia resident sessions are covered with an adapter-level fake; lv-chordia itself was not installed on this machine during these checks. The actual runtime smoke used madmom.
+## v1.0.1 startup and installation gates
+
+The installed v1.0.0 reported an engine startup timeout on the user's Windows machine. Its log ended during native Librosa initialization; an isolated retry of that installed engine became healthy in 35.6 seconds. This shows the bundled engine can execute there, while the original 45-second limit leaves little cold-start margin. It does not establish the exact duration of the failed first launch.
+
+The patch moves initialization off the desktop event thread, extends its bounded readiness window, and starts ownership monitoring before imports. CI now checks installer/application icon resources and exercises installation, rendered startup, uninstaller branding and DeChord registry cleanup. Publication is gated on the complete patch workflow. No patched application has been installed on the user's computer.

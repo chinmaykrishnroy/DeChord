@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import shutil
+from release_version import release_version
 
 
 def main():
@@ -26,7 +27,7 @@ def main():
     releases = root / "build/releases"
     releases.mkdir(exist_ok=True)
     shutil.make_archive(
-        str(releases / "DeChord_1.0.0_windows_x64_portable"),
+        str(releases / f"DeChord_{release_version()}_windows_x64_portable"),
         "zip",
         root_dir=output.parent,
         base_dir=output.name,
