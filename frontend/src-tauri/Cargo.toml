@@ -1,6 +1,6 @@
 [package]
 name = "dechord"
-version = "1.0.0"
+version = "1.0.1"
 description = "DeChord music practice studio"
 authors = ["Chinmay Krishn Roy"]
 edition = "2021"

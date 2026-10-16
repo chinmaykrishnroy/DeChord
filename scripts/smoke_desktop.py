@@ -7,6 +7,7 @@ from pathlib import Path
 import socket
 import subprocess
 import tempfile
+from release_version import release_version
 
 
 def main():
@@ -27,7 +28,7 @@ def main():
             [str(args.binary.resolve())], env=environment, cwd=folder
         )
         try:
-            assert child.wait(timeout=90) == 0, "Desktop process failed"
+            assert child.wait(timeout=240) == 0, "Desktop process failed"
         except subprocess.TimeoutExpired:
             child.kill()
             child.wait()
@@ -36,7 +37,9 @@ def main():
             "No frontend readiness report: the window/engine did not initialize"
         )
         data = json.loads(report.read_text())
-        assert data["frontend_ready"] and data["health"]["version"] == "1.0.0", data
+        assert (
+            data["frontend_ready"] and data["health"]["version"] == release_version()
+        ), data
         assert (
             Path(data["data_dir"]).resolve() == Path(folder, "engine-data").resolve()
         ), data

@@ -9,7 +9,7 @@ import unittest
 
 
 class DesktopLifecycleTests(unittest.TestCase):
-    def run_owned_child(self, *, busy, isolated_group=False):
+    def run_owned_child(self, *, busy, isolated_group=False, starting=False):
         code = f"""
 import sys, time, types
 from concurrent.futures import ThreadPoolExecutor
@@ -24,7 +24,13 @@ class Server:
 sys.modules['uvicorn'] = types.SimpleNamespace(Server=Server, Config=lambda *a, **kw: None)
 sys.modules['backend.app.main'] = types.SimpleNamespace(app=object())
 from backend import desktop_entry
-desktop_entry.OWNER_EXIT_TIMEOUT_SECONDS = {0.15 if busy else 30}
+desktop_entry.OWNER_EXIT_TIMEOUT_SECONDS = {0.15 if busy or starting else 30}
+if {starting!r}:
+    sys.frozen = True
+    def verify_models(_):
+        print('ready', flush=True)
+        time.sleep(30)
+    sys.modules['backend.core.integrity'] = types.SimpleNamespace(verify_models=verify_models)
 sys.argv = ['dechord-engine', '--owned']
 desktop_entry.main()
 """
@@ -55,6 +61,9 @@ desktop_entry.main()
 
     def test_idle_engine_exits_without_waiting_for_force_deadline(self):
         self.assertEqual(self.run_owned_child(busy=False), 0)
+
+    def test_engine_cannot_outlive_owner_during_cold_initialization(self):
+        self.assertEqual(self.run_owned_child(busy=False, starting=True), 0)
 
     @unittest.skipUnless(os.name == "posix", "POSIX process groups")
     def test_busy_engine_terminates_its_private_process_group(self):

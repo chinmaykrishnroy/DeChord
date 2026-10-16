@@ -2,9 +2,11 @@
 
 mod engine;
 mod process_group;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::Manager;
 
 struct StartupError(String);
+struct StartupControl(AtomicBool);
 
 fn smoke_directory() -> Option<std::path::PathBuf> {
     std::env::var_os("DECHORD_SMOKE_REPORT").map(|report| {
@@ -46,14 +48,21 @@ fn main() {
     }
     tauri::Builder::default()
         .setup(move |app| {
-            match engine::Engine::start(app) {
+            app.manage(StartupControl(AtomicBool::new(false)));
+            let handle = app.handle().clone();
+            // Native imports and first-run compilation must not block the window.
+            std::thread::spawn(move || match engine::Engine::start(&handle) {
                 Ok(engine) => {
-                    app.manage(engine);
+                    if handle.state::<StartupControl>().0.load(Ordering::SeqCst) {
+                        engine.stop();
+                    } else {
+                        handle.manage(engine);
+                    }
                 }
                 Err(error) => {
-                    app.manage(StartupError(error.to_string()));
+                    handle.manage(StartupError(error.to_string()));
                 }
-            }
+            });
             if let Some(root) = &smoke_root {
                 let config = app
                     .config()
@@ -76,6 +85,9 @@ fn main() {
         .expect("failed to start DeChord")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
+                app.state::<StartupControl>()
+                    .0
+                    .store(true, Ordering::SeqCst);
                 if let Some(engine) = app.try_state::<engine::Engine>() {
                     engine.stop();
                 }

@@ -26,7 +26,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn start(app: &tauri::App) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn start(app: &tauri::AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
         if cfg!(debug_assertions) && std::env::var_os("DECHORD_ENGINE_DIR").is_none() {
             return Ok(Self {
                 connection: Connection {
@@ -108,8 +108,15 @@ impl Engine {
             data_dir: Some(data.clone()),
             _group: Some(group),
         };
-        let deadline = Instant::now() + Duration::from_secs(45);
+        let deadline = Instant::now() + Duration::from_secs(180);
         loop {
+            if app
+                .state::<crate::StartupControl>()
+                .0
+                .load(std::sync::atomic::Ordering::SeqCst)
+            {
+                return Err("Desktop closed during engine startup".into());
+            }
             if engine.health().is_ok() {
                 return Ok(engine);
             }
@@ -129,10 +136,11 @@ impl Engine {
                 .into());
             }
             if Instant::now() >= deadline {
-                return Err(
-                    "Analysis engine startup timed out. See engine.log in the app data folder."
-                        .into(),
-                );
+                return Err(format!(
+                    "Analysis engine did not become ready within 180 seconds. Diagnostic log: {}",
+                    data.join("engine.log").display()
+                )
+                .into());
             }
             thread::sleep(Duration::from_millis(100));
         }
@@ -195,10 +203,25 @@ impl Drop for Engine {
 }
 
 #[tauri::command]
-pub fn backend_connection(app: tauri::AppHandle) -> Result<Connection, String> {
-    app.try_state::<Engine>()
-        .map(|engine| engine.connection.clone())
-        .ok_or_else(|| app.state::<crate::StartupError>().0.clone())
+pub async fn backend_connection(app: tauri::AppHandle) -> Result<Connection, String> {
+    tauri::async_runtime::spawn_blocking(move || loop {
+        if let Some(engine) = app.try_state::<Engine>() {
+            return Ok(engine.connection.clone());
+        }
+        if let Some(error) = app.try_state::<crate::StartupError>() {
+            return Err(error.0.clone());
+        }
+        if app
+            .state::<crate::StartupControl>()
+            .0
+            .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            return Err("Desktop is closing".into());
+        }
+        thread::sleep(Duration::from_millis(100));
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
