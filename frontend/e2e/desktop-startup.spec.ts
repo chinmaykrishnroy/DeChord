@@ -4,6 +4,7 @@ test("desktop shows a responsive startup screen while the engine initializes", a
   page,
 }) => {
   await page.addInitScript(() => {
+    Object.defineProperty(window, "isTauri", { value: true });
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       value: { invoke: () => new Promise(() => {}) },
     });
@@ -19,6 +20,7 @@ test("desktop startup failure shows the diagnostic once as text", async ({
   page,
 }) => {
   await page.addInitScript(() => {
+    Object.defineProperty(window, "isTauri", { value: true });
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       value: {
         invoke: () =>
