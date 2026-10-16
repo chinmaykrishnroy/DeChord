@@ -13,7 +13,7 @@ from scripts import verify_release_source
 
 class ReleaseSourceTests(unittest.TestCase):
     def setUp(self):
-        self.run = {
+        self.run_info = {
             "status": "completed",
             "conclusion": "success",
             "html_url": "https://example.invalid/run",
@@ -28,11 +28,19 @@ class ReleaseSourceTests(unittest.TestCase):
             for system in ("windows-2022", "ubuntu-24.04")
             for version in ("3.10", "3.11")
         ]
-        names += ["web-image (ubuntu-24.04, amd64)", "web-image (ubuntu-24.04-arm, arm64)"]
+        names += [
+            "web-image (ubuntu-24.04, amd64)",
+            "web-image (ubuntu-24.04-arm, arm64)",
+        ]
         self.jobs = [{"name": name, "conclusion": "success"} for name in names]
         self.artifacts = [
             {"name": name, "expired": False}
-            for name in ("desktop-Windows", "desktop-Linux", "docker-amd64", "docker-arm64")
+            for name in (
+                "desktop-Windows",
+                "desktop-Linux",
+                "docker-amd64",
+                "docker-arm64",
+            )
         ]
 
     def invoke(self, git_error=False):
@@ -42,7 +50,7 @@ class ReleaseSourceTests(unittest.TestCase):
             elif "/artifacts?" in request.full_url:
                 data = {"artifacts": self.artifacts}
             else:
-                data = self.run
+                data = self.run_info
             return io.BytesIO(json.dumps(data).encode())
 
         environment = {"GITHUB_REPOSITORY": "owner/dechord", "GH_TOKEN": "test-only"}
@@ -63,12 +71,14 @@ class ReleaseSourceTests(unittest.TestCase):
         self.assertTrue(json.loads(self.invoke())["tree_matches_tag"])
 
     def test_foreign_repository_is_rejected(self):
-        self.run["head_repository"]["full_name"] = "someone/else"
+        self.run_info["head_repository"]["full_name"] = "someone/else"
         with self.assertRaises(AssertionError):
             self.invoke()
 
     def test_missing_platform_gate_is_rejected(self):
-        self.jobs = [job for job in self.jobs if job["name"] != "desktop (windows-2022)"]
+        self.jobs = [
+            job for job in self.jobs if job["name"] != "desktop (windows-2022)"
+        ]
         with self.assertRaises(AssertionError):
             self.invoke()
 
