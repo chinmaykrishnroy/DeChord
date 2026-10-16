@@ -116,10 +116,13 @@ jobs:
       - if: runner.os == 'Windows'
         run: |
           python scripts/package_portable.py
+          python scripts/smoke_engine.py build/portable/DeChord/engine/dechord-engine.exe
           python scripts/smoke_desktop.py build/portable/DeChord/dechord.exe
       - if: runner.os == 'Linux'
         run: |
           sudo dpkg -i frontend/src-tauri/target/release/bundle/deb/*.deb
+          python scripts/smoke_engine.py /usr/lib/DeChord/engine/dechord-engine
+          python scripts/smoke_appimage.py frontend/src-tauri/target/release/bundle/appimage/*.AppImage
           xvfb-run -a dbus-run-session -- python scripts/smoke_desktop.py /usr/bin/dechord
           xvfb-run -a dbus-run-session -- python scripts/smoke_desktop.py frontend/src-tauri/target/release/bundle/appimage/*.AppImage
         env:

@@ -58,6 +58,7 @@ def main():
                 stdout=log,
                 stderr=log,
                 env=environment,
+                cwd=folder,
             )
             try:
                 deadline = time.monotonic() + 60
