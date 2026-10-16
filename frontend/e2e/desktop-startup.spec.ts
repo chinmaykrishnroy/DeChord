@@ -14,6 +14,9 @@ test("desktop shows a responsive startup screen while the engine initializes", a
     page.getByRole("heading", { name: "Starting DeChord" }),
   ).toBeVisible();
   await expect(page.getByText(/Starting locally · [1-9]\d*s/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Close window" }),
+  ).toBeVisible();
 });
 
 test("desktop startup failure shows the diagnostic once as text", async ({
